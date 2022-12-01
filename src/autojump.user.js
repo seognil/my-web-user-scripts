@@ -9,7 +9,6 @@
 // @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/autojump.user.js
 // @match        https://link.juejin.cn/*
 // @match        https://link.zhihu.com/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=tampermonkey.net
 // @run-at       document-start
 // @grant        none
 // ==/UserScript==

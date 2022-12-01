@@ -9,6 +9,7 @@
 // @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github1s-button.user.js
 // @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github1s-button.user.js
 // @match        https://github.com/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @run-at       document-end
 // @grant        none
 // ==/UserScript==

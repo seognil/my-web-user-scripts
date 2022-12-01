@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LC] YouTube Playlist Timer
 // @description  Add a simple progress bar for youtube playlist
-// @version      beta
+// @version      0.0.1
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts

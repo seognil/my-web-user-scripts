@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LC] Github1s Button
 // @description  Add github1s online editor button for github repo
-// @version      0.0.1
+// @version      0.0.2
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts
@@ -56,7 +56,7 @@
     // * keep observering new nodes if match selector
     const observer = new MutationObserver((mutationList, observer) => {
       mutationList.forEach((mutation) => {
-        mutation.addedNodes.filter((node) => node.matches?.(selector)).forEach((node) => callback(node, "new"));
+        mutation.addedNodes.forEach((node) => node.matches?.(selector) && callback(node, "new"));
       });
     });
     observer.observe(document, { attributes: false, childList: true, subtree: true });

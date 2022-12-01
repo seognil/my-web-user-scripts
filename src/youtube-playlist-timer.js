@@ -1,3 +1,18 @@
+// ==UserScript==
+// @name         [LC] YouTube Playlist Timer
+// @description  Add a simple progress bar for youtube playlist
+// @version      beta
+// @author       Seognil LC
+// @license      AGPL-3.0-only
+// @namespace    https://github.com/seognil/my-web-user-scripts
+// @supportURL   https://github.com/seognil/my-web-user-scripts
+// @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/youtube-playlist-timer.user.js
+// @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/youtube-playlist-timer.user.js
+// @match        https://www.youtube.com/*
+// @run-at       document-end
+// @grant        none
+// ==/UserScript==
+
 {
   // * ================================================================================ YoutubePlaylistTimer
 
@@ -28,16 +43,10 @@
 
     const currentVideoIndex = playlistItems.findIndex((e) => e.attributes["selected"]);
 
-    const timesList = playlistItems.map((e) =>
-      ToSec(e.querySelector("span.ytd-thumbnail-overlay-time-status-renderer")?.innerText),
-    );
+    const timesList = playlistItems.map((e) => ToSec(e.querySelector("span.ytd-thumbnail-overlay-time-status-renderer")?.innerText));
 
     /** currentTime, totalTime */
-    return [
-      timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) +
-        ~~Number(document.querySelector("video")?.currentTime),
-      timesList.reduce((a, e) => a + e, 0),
-    ];
+    return [timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + ~~Number(document.querySelector("video")?.currentTime), timesList.reduce((a, e) => a + e, 0)];
   };
 
   // * ---------------------------------------------------------------- View Layer
@@ -89,7 +98,7 @@
     Object.assign(timeTextSpan.style, {
       position: "absolute",
       top: "2px",
-      right: "2px",
+      right: "12px",
     });
 
     // * ---------------- append view
@@ -145,30 +154,16 @@
   // * ---------------------------------------------------------------- dom observer
 
   const domObserver = (selector, callback) => {
-    // * ---------------- already loaded
+    // * already loaded
+    document.querySelectorAll(selector).forEach((node) => callback(node, "existed"));
 
-    document.querySelectorAll(selector).forEach((node) => {
-      console.log("[domObserver] existed node", node);
-      callback(node);
-    });
-
-    // * ---------------- keep observering new nodes if matches selector
-
+    // * keep observering new nodes if match selector
     const observer = new MutationObserver((mutationList, observer) => {
       mutationList.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (!node.matches?.(selector)) return;
-          console.log("[domObserver] new node loaded", node);
-          callback(node);
-        });
+        mutation.addedNodes.filter((node) => node.matches?.(selector)).forEach((node) => callback(node, "new"));
       });
     });
-
-    observer.observe(document, {
-      attributes: false,
-      childList: true,
-      subtree: true,
-    });
+    observer.observe(document, { attributes: false, childList: true, subtree: true });
   };
 
   // * ================================================================================

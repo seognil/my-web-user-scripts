@@ -1,3 +1,19 @@
+// ==UserScript==
+// @name         [LC] Bilibili Enhanced
+// @description  Custom Bilibili Hotkeys and automation
+// @version      beta
+// @author       Seognil LC
+// @license      AGPL-3.0-only
+// @namespace    https://github.com/seognil/my-web-user-scripts
+// @supportURL   https://github.com/seognil/my-web-user-scripts
+// @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/bilibili-enhanced.user.js
+// @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/bilibili-enhanced.user.js
+// @match        https://www.bilibili.com/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=bilibili.com
+// @run-at       document-end
+// @grant        none
+// ==/UserScript==
+
 {
   const getBiliVideo = () => document.querySelector("#bilibili-player, #bilibiliPlayer")?.querySelector(".bpx-player-video-wrap, .bilibili-player-video-wrap")?.querySelector("video");
 
@@ -38,6 +54,54 @@
    */
 
   {
+  }
+
+  // * ================================================================================ style
+  {
+    const addGlobalStyle = (content) => {
+      const head = document.head;
+      if (!head) return;
+
+      const node = document.createElement("style");
+      node.type = "text/css";
+      node.innerHTML = content;
+      head.appendChild(node);
+    };
+
+    addGlobalStyle(`
+      /* override player top title bar mask */
+      .bpx-player-top-wrap .bpx-player-top-mask,
+      .bilibili-player-video-top .bilibili-player-video-top-mask {
+        background: none !important;
+      }
+
+      /* override player bottom control bar */
+      .bpx-player-control-wrap,
+      .bilibili-player-video-control-wrap {
+        opacity: 0.7;
+      }
+
+      #mod-messager {
+        position: absolute;
+        bottom: 150px;
+        left: 10px;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        background-color: hsla(0, 0%, 0%, 0.5);
+        color: white;
+        z-index: 1;
+        opacity: 0;
+        font-size: 20px;
+        transition-duration: 500ms;
+      }
+
+      #mod-messager.shown {
+        opacity: 1;
+      }
+    `);
   }
 
   // * ================================================================================ auto
@@ -317,22 +381,22 @@
     const setReplayLoop = () => {
       const input = document.querySelector(".bpx-player-ctrl-setting-loop input, input.squirtle-setting-loop, .bilibili-player-video-btn-setting-left-repeat input");
 
-      messager("洗脑循环");
+      if (input?.checked === true) {
+        messager("关闭循环");
 
-      // @ts-ignore
-      // * already looped
-      if (input?.checked === true) return;
+        input?.click();
+      } else {
+        messager("开启循环");
 
-      // @ts-ignore
-      // * turn on loop
-      input?.click();
+        input?.click();
 
-      // * if finished, start replay immediately
-      const video = getBiliVideo();
-      if (!video) return;
-      if (video.paused && video.currentTime >= video.duration) {
-        setPlaybackJumpToPercent(0);
-        video.play();
+        // * if video already ended, start replay immediately
+        const video = getBiliVideo();
+        if (!video) return;
+        if (video.paused && video.currentTime >= video.duration) {
+          setPlaybackJumpToPercent(0);
+          video.play();
+        }
       }
     };
 

@@ -85,6 +85,8 @@
       const checkAutoPlayForPlaylist = () => {
         const playlist = document.querySelector(".ep-list-wrapper ul, .video-section-list, .player-auxiliary-playlist-list, #multi_page .cur-list ul");
 
+        // * ----------------
+
         // * 自动切集
         const autonext = document.querySelector(".bpx-player-ctrl-setting-handoff input[value='0'], .squirtle-handoff-auto, .bilibili-player-video-btn-setting-right-playtype input[value='1']");
 
@@ -93,6 +95,13 @@
 
         // @ts-ignore
         playlist ? autonext?.click() : stopnext?.click();
+
+        // * ---------------- fix incase of toolbar is lazy rendered (6.)
+
+        // * auto play next switcher
+        const autobutton = document.querySelector(".player-auxiliary-autoplay-switch input");
+
+        playlist ? !autobutton.checked && autobutton.click() : autobutton.checked && autobutton.click();
       };
 
       document.addEventListener("play", checkAutoPlayForPlaylist, true);
@@ -109,6 +118,8 @@
       if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")) return;
 
       if (false) "";
+      // * ---------------- copy clean url
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "c") copyUrl(e);
       // * ---------------- original feature hotkey
       else if (e.key === "[" || e.key === "PageUp") playlistCutOff(-1);
       else if (e.key === "]" || e.key === "PageUp") playlistCutOff(1);
@@ -118,8 +129,8 @@
       // * ---------------- time jump
       // else if ("1234567890".split("").some((v) => v === e.key)) setPlaybackJumpToPercent(e.key);
       else if (e.key === "Backspace") setPlaybackJumpToPercent(0);
-      else if (e.key === "q") setPlaybackJumpBySec(-jumpStep);
-      else if (e.key === "e") setPlaybackJumpBySec(+jumpStep);
+      else if (e.key === "q" || e.key === "ArrowLeft") setPlaybackJumpBySec(-jumpStep);
+      else if (e.key === "e" || e.key === "ArrowRight") setPlaybackJumpBySec(+jumpStep);
       else if (e.code === "Space") e.preventDefault(), togglePlay();
       // * ---------------- speed
       else if (e.key === "z") setPlaybackSpeedBy(-speedStep);
@@ -144,7 +155,7 @@
                 ("OVERRIDE_FLAG");
                 const [e] = args;
                 const MASK_LIST = "qwert asdfg zxcvb 01234567890";
-                if (MASK_LIST.includes(e.key)) return;
+                if (MASK_LIST.includes(e.key) || ["ArrowLeft", "ArrowRight"].includes(e.key)) return;
                 fn.call(this, ...args);
               };
 
@@ -169,6 +180,15 @@
     }
 
     // * ================================================================================ Features
+
+    // * ---------------------------------------------------------------- copy clean url
+
+    const copyUrl = (e) => {
+      e.preventDefault();
+      const U = new URL(document.location);
+      const url = U.href.replace(U.search, "");
+      navigator.clipboard.writeText(url);
+    };
 
     // * ---------------------------------------------------------------- playlist cut off
 

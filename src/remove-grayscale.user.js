@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         [LC] Remove GrayScale
 // @description  remove css grayscale for usability
-// @version      0.0.2
+// @version      0.0.3
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts
 // @supportURL   https://github.com/seognil/my-web-user-scripts
 // @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/remove-grayscale.user.js
 // @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/remove-grayscale.user.js
-// @match        *
+// @match        *://*/*
 // @run-at       document-end
 // @grant        none
 // ==/UserScript==

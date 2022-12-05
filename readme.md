@@ -15,15 +15,15 @@
 
 ---
 
-### Github1s 按钮
+### 给 Github 添加在线编辑器按钮
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github1s-button.user.js)
+[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github-vscode-button.user.js)
 
-![github1s button](./images/github1s-button.png)
+![github vscode button](./images/github-vscode-button.png)
 
-点击 github1s 在线编辑器按钮，以便快速打开项目浏览源码
+[vscode.dev 和 github.dev 的区别](https://code.visualstudio.com/blogs/2021/10/20/vscode-dev#_github)
 
-（虽然后来 GitHub 也新增了快捷键 `.` 支持跳转到 github.dev 在线编辑器，功能全但是打开速度比较慢，我更喜欢用 github1s）
+（github.dev 可以通过自带快捷键 `.`，不过可能因为有一些额外加载项，打开速度较慢，我不是很喜欢）
 
 ---
 
@@ -71,3 +71,11 @@
   - 前景视频播放时，暂停其他标签页的视频（防止同时播放多个视频串音）（JS 安全限制所以只能控制 B 站同源页面，不知道有没有更好的做法…）
 
 ---
+
+## Deprecated
+
+### Github1s 按钮
+
+[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github1s-button.user.js)
+
+点击 github1s 在线编辑器按钮，以便快速打开项目浏览源码

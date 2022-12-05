@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LC] GitHub VSCode Button
 // @description  Add an online editor button for github repo
-// @version      0.0.1
+// @version      0.0.2
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts
@@ -19,7 +19,7 @@
 
   const githubVSCode = () => {
     // * use observer to support dynamic page rendering/jumping
-    domObserver(".pagehead-actions", (ul) => {
+    domObserverSeek(".pagehead-actions", 100, (ul) => {
       const BTN_ID = "github-vscode-button";
 
       // * ---------------- button already added
@@ -45,16 +45,13 @@
 
   // * ---------------------------------------------------------------- dom observer
 
-  const domObserver = (selector, callback) => {
-    // * already loaded
-    document.querySelectorAll(selector).forEach((node) => callback(node, "existed"));
+  const domObserverSeek = (selector, debounceMs, callback) => {
+    const set = new WeakSet();
+    const callNodes = (mark = "new") => document.querySelectorAll(selector).forEach((n) => set.has(n) || (set.add(n), callback(n, mark)));
 
-    // * keep observering new nodes if match selector
-    const observer = new MutationObserver((mutationList, observer) => {
-      mutationList.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => node.matches?.(selector) && callback(node, "new"));
-      });
-    });
+    callNodes("existed");
+    let timer = null;
+    const observer = new MutationObserver(() => (clearTimeout(timer), (timer = setTimeout(callNodes, debounceMs))));
     observer.observe(document, { attributes: false, childList: true, subtree: true });
   };
 

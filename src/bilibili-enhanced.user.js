@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LC] Bilibili Enhanced
 // @description  Custom Bilibili Hotkeys and automation
-// @version      0.0.1
+// @version      0.0.2
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts
@@ -147,15 +147,32 @@
 
     {
       const checkAutoPlayForPlaylist = () => {
-        const playlist = document.querySelector(".ep-list-wrapper ul, .video-section-list, .player-auxiliary-playlist-list, #multi_page .cur-list ul");
+        const playlist = document.querySelector([
+          //
+          ".ep-list-wrapper ul",
+          ".video-section-list",
+          ".player-auxiliary-playlist-list",
+          "#multi_page .cur-list ul",
+          ".action-list-container",
+        ]);
 
         // * ----------------
 
         // * 自动切集
-        const autonext = document.querySelector(".bpx-player-ctrl-setting-handoff input[value='0'], .squirtle-handoff-auto, .bilibili-player-video-btn-setting-right-playtype input[value='1']");
+        const autonext = document.querySelector([
+          //
+          ".bpx-player-ctrl-setting-handoff input[value='0']",
+          ".squirtle-handoff-auto",
+          ".bilibili-player-video-btn-setting-right-playtype input[value='1']",
+        ]);
 
         // * 播完暂停
-        const stopnext = document.querySelector(".bpx-player-ctrl-setting-handoff input[value='2'], .squirtle-handoff-pause, .bilibili-player-video-btn-setting-right-playtype input[value='2']");
+        const stopnext = document.querySelector([
+          //
+          ".bpx-player-ctrl-setting-handoff input[value='2']",
+          ".squirtle-handoff-pause",
+          ".bilibili-player-video-btn-setting-right-playtype input[value='2']",
+        ]);
 
         // @ts-ignore
         playlist ? autonext?.click() : stopnext?.click();

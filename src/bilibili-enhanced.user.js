@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         [LC] Bilibili Enhanced
 // @description  Custom Bilibili Hotkeys and automation
-// @version      0.0.2
+// @version      0.0.3
 // @author       Seognil LC
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts

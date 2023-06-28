@@ -202,23 +202,24 @@
       // * ---------------- copy clean url
       else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "c") copyUrl(e);
       // * ---------------- original feature hotkey
-      else if (e.key === "[" || e.key === "PageUp") playlistCutOff(-1);
-      else if (e.key === "]" || e.key === "PageUp") playlistCutOff(1);
-      else if (e.key === "c") toggleDanmu();
-      else if (e.key === "t") toggleWebFull();
-      else if (e.key === "f" && !(e.metaKey || e.ctrlKey)) toggleScreenFull();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "[" || e.key === "PageUp") playlistCutOff(-1);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "]" || e.key === "PageUp") playlistCutOff(1);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") toggleDanmu();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "t") toggleWebFull();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "f" && !(e.metaKey || e.ctrlKey)) toggleScreenFull();
       // * ---------------- time jump
-      // else if ("1234567890".split("").some((v) => v === e.key)) setPlaybackJumpToPercent(e.key);
-      else if (e.key === "Backspace") setPlaybackJumpToPercent(0);
-      else if (e.key === "q" || e.key === "ArrowLeft") setPlaybackJumpBySec(-jumpStep);
-      else if (e.key === "e" || e.key === "ArrowRight") setPlaybackJumpBySec(+jumpStep);
-      else if (e.code === "Space") e.preventDefault(), togglePlay();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "Backspace") setPlaybackJumpToPercent(0);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "q" || e.key === "ArrowLeft") setPlaybackJumpBySec(-jumpStep);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "e" || e.key === "ArrowRight") setPlaybackJumpBySec(+jumpStep);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.code === "Space") e.preventDefault(), togglePlay();
       // * ---------------- speed
-      else if (e.key === "z") setPlaybackSpeedBy(-speedStep);
-      else if (e.key === "x") setPlaybackSpeedBy(+speedStep);
-      else if (e.key === "v") togglePlaybackSpeed();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "z") setPlaybackSpeedBy(-speedStep);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "x") setPlaybackSpeedBy(+speedStep);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "v") togglePlaybackSpeed();
       // * ---------------- loop
-      else if (e.key === "r") setReplayLoop();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "r") setReplayLoop();
+      // * ---------------- misc
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "Escape") document.querySelector('.reply-view-image .close-container')?.click();
     });
 
     // * ================================================================================ Block Original Hotkeys

@@ -111,7 +111,7 @@ const mediaControl = (() => {
    * 当接收到媒体标识后
    *    只暂停记录的受控媒体
    *
-   * 用 Set 而不是 WeakSet 因为可以遍历
+   * 用 Set + WeakRef 而不是 WeakSet 因为可以遍历
    * @type {Set<WeakRef<HTMLMediaElement>>}
    */
   const set = new Set();
@@ -146,11 +146,15 @@ const mediaControl = (() => {
       if (!(e.target instanceof HTMLMediaElement)) return;
       const media = e.target;
 
-      const shouldControl = isMatchSelectorFn(media, selectorFn);
+      /** 缓存运算结果提高性能 */
+      if (!media.dataset.mcgs) {
+        const shouldControl = isMatchSelectorFn(media, selectorFn);
+        media.dataset.mcgs = shouldControl ? "true" : "false";
+        set.add(new WeakRef(media));
+      }
+      const shouldControl = media.dataset.mcgs;
 
       if (!shouldControl) return;
-
-      set.add(new WeakRef(media));
 
       bc.postMessage(getMediaIdentifier(media));
     };

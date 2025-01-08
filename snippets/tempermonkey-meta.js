@@ -7,10 +7,10 @@
 // @license      AGPL-3.0-only
 // @namespace    https://github.com/seognil/my-web-user-scripts
 // @supportURL   https://github.com/seognil/my-web-user-scripts
-// @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/XXXXXXXX.user.js
-// @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/XXXXXXXX.user.js
-// @match        XXXXXXXX
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=XXXXXXXX
+// @updateURL    https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/xxx.js
+// @downloadURL  https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/xxx.js
+// @match        xxx.com
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=xxx.com
 // @run-at       document-end
 // @grant        none
 // ==/UserScript==

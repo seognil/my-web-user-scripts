@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
+    "checkJs": true,
+  }
+}

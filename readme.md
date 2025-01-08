@@ -1,27 +1,29 @@
 # 自用的一些网站脚本
 
-## 安装
+## 自用
 
-1. 安装 [Tampermonkey](https://www.tampermonkey.net/) 浏览器插件
-2. 加载所需的脚本
+仅自用，不再支持 Tampermonkey，也是根据我自己的需求出发的，维护起来灵活一点
+
+用 JS + JSDoc 来写，不用 TS，不需要编译直接用，直接调试也方便，也能有简单的类型检查
+
+我用 [User JavaScript and CSS](https://chromewebstore.google.com/detail/user-javascript-and-css/nbhcbdghjpllgmfilhnhkllmkecfmpld) 这个插件来加载脚本，加载 css 也方便一点
+
+写了两组工具函数，封装了一些常用功能。直接挂载到全局，不需要 import
+
+- [dom-observer](./src//utils/dom-observer.js)
+- [media-control](./src//utils/media-control.js)
 
 ---
 
-### 恢复网页彩色模式
+~~1. 安装 [Tampermonkey](https://www.tampermonkey.net/) 浏览器插件~~
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/remove-grayscale.user.js)
-
-移除网站的灰色模式，恢复正常彩色模式（虽然理解是哀悼日，但是这样不方便干活了鸭 >\_< ）
-
-> 如果直接 "\* {filter: none !important}" 覆盖所有，那么有可能会破坏一些正常的效果  
-> 所以只将 filter 里的 grayscale(xxx) 替换为 grayscale(0)，可以最大限度保留网站原有效果  
-> 当然，过几天等恢复正常了就不需要开这个插件了
+~~2. 加载所需的脚本~~
 
 ---
 
 ### 给 Github 添加在线编辑器按钮
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github-vscode-button.user.js)
+[code](./src/github-dev-button.js)
 
 ![github vscode button](./images/github-vscode-button.png)
 
@@ -33,7 +35,7 @@
 
 ### link 链接自动跳转
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/autojump.user.js)
+[code](./src/autojump.js)
 
 比如从知乎文章点击外部链接 xxx 时，不会直接访问 xxx，而是会访问 https://link.zhihu.com/?target=xxx
 
@@ -43,7 +45,7 @@
 
 ### YouTube 播放列表进度条
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/youtube-playlist-timer.user.js)
+[code](./src/youtube-playlist-timer.user.js)
 
 ![YouTube Playlist Timer](./images/youtube-playlist-timer.png)
 
@@ -53,7 +55,7 @@
 
 ### Bilibili 快捷键
 
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/bilibili-enhanced.user.js)
+[code](./src/bilibili-enhanced.js)
 
 覆写 B 站的快捷键（使大部分视频控制键位集中在左手区，以方便单手操作）
 
@@ -63,11 +65,11 @@
   - `t` 网页全屏
   - `f` 屏幕全屏
   - `Backspace` 从头播放
-  - `q` 倒退 2 秒
-  - `e` 前进 2 秒
+  - `q` 倒退 1 秒
+  - `e` 前进 1 秒
   - `Space` 播放暂停
-  - `z` 变速 -0.15
-  - `x` 变速 +0.15
+  - `z` 变速 -0.125
+  - `x` 变速 +0.125
   - `v` 切换变速
   - `r` 切换单集循环
 - 自动化
@@ -75,11 +77,3 @@
   - 前景视频播放时，暂停其他标签页的视频（防止同时播放多个视频串音）（JS 安全限制所以只能控制 B 站同源页面，不知道有没有更好的做法…）
 
 ---
-
-## Deprecated
-
-### Github1s 按钮
-
-[加载脚本](https://raw.githubusercontent.com/seognil/my-web-user-scripts/master/src/github1s-button.user.js)
-
-点击 github1s 在线编辑器按钮，以便快速打开项目浏览源码

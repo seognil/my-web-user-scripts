@@ -8,6 +8,17 @@
   opacity: 0.7;
 }
 
+#bilibili-player,
+#shinonome {
+  &.danmaku-hidden {
+    .bpx-player-dm-switch,
+    .bpx-player-row-dm-wrap,
+    .bpx-player-cmd-dm-wrap {
+      opacity: 0 !important;
+    }
+  }
+}
+
 #bc-toast {
   position: absolute;
   bottom: 150px;

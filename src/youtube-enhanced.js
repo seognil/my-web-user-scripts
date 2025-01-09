@@ -34,19 +34,17 @@
   // * ---------------------------------------------------------------- progress bar
 
   {
-    /** @return {HTMLMediaElement} */
-    const getVideo = () => document.querySelector("#movie_player video");
-
     // * ---------------- calculation
 
     /**
      * 因为 列表、children、时间标签 都是动态加载的，所以不容易做缓存什么的
      * 简单的每次都计算，性能影响不会很大
      *
+     * @param {HTMLElement} playlistEl
      * @returns {[number,number]} [current time, total time]
      */
-    const calcTime = () => {
-      const playlistItems = Array.from(document.querySelector("#content #playlist")?.querySelector("#items")?.children);
+    const calcTime = (playlistEl) => {
+      const playlistItems = Array.from(playlistEl.querySelector("#items")?.children);
 
       const currentVideoIndex = playlistItems.findIndex((e) => e.attributes["selected"]);
 
@@ -62,29 +60,43 @@
 
     // * ---------------- start
 
-    let loaded = false;
+    const mediasFlag = new WeakMap();
 
-    domObserverAll("#movie_player video", (e) => {
-      e.addEventListener("timeupdate", () => {
-        const isPlaylist = new URL(window.location.href).searchParams.get("list") !== null;
-        if (!isPlaylist) return;
+    /** 优化，仅当媒体播放时，挂载一次 update 事件 */
+    document.addEventListener(
+      "play",
+      (e) => {
+        const media = e.target;
+        if (mediasFlag.has(media)) return;
 
-        const pb = progressBar;
+        const shouldControl = media === getVideo();
+        if (!shouldControl) return mediasFlag.set(media, false);
 
-        if (!loaded) {
-          domObserverOnce("#content ytd-playlist-panel-renderer", (e) => {
-            if (!e.contains(pb.pbEl)) {
-              e.style.position = "relative";
-              e.appendChild(pb.pbEl);
-            }
-            loaded = true;
-          });
-          return;
-        }
+        const updateHandler = () => {
+          // const isPlaylist = new URL(window.location.href).searchParams.get("list") !== null;
+          // if (!isPlaylist) return;
+          /** @type {HTMLElement} */
+          const playlistEl = document.querySelector("#content ytd-playlist-panel-renderer");
+          if (!playlistEl) return;
 
-        const [currentTime, totalTime] = calcTime();
-        pb.updateProgressBar(currentTime, totalTime);
-      });
-    });
+          const pb = progressBar;
+
+          if (!playlistEl.contains(pb.pbEl)) {
+            playlistEl.style.position = "relative";
+            Object.assign(pb.pbEl.style, { position: "absolute", top: "0", right: "0", width: "100%" });
+            Object.assign(pb.textEl.style, { right: "8px" });
+            playlistEl.appendChild(pb.pbEl);
+          }
+
+          const [currentTime, totalTime] = calcTime(playlistEl);
+          pb.updateProgressBar(currentTime, totalTime);
+        };
+        media.addEventListener("timeupdate", updateHandler);
+        mediasFlag.set(media, updateHandler);
+      },
+      true
+    );
   }
+
+  // * ----------------------------------------------------------------
 }

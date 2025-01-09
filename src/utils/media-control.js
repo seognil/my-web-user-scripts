@@ -114,13 +114,15 @@ const mediaControl = (() => {
    * 用 Set + WeakRef 而不是 WeakSet 因为可以遍历
    * @type {Set<WeakRef<HTMLMediaElement>>}
    */
-  const set = new Set();
+  const medias = new Set();
+  /** @type {WeakMap<HTMLMediaElement,boolean>} */
+  const mediasControlled = new WeakMap();
 
   bc.addEventListener("message", ({ data }) => {
-    set.forEach((e) => {
+    medias.forEach((e) => {
       const media = e.deref();
 
-      if (!media) return set.delete(e);
+      if (!media) return medias.delete(e);
 
       if (media.paused) return;
 
@@ -143,17 +145,16 @@ const mediaControl = (() => {
   const enableGlobalSoloPlaying = (selectorFn = getMediaAll) => {
     /** @param {Event} e */
     const handler = (e) => {
-      if (!(e.target instanceof HTMLMediaElement)) return;
       const media = e.target;
+      if (!(media instanceof HTMLMediaElement)) return;
 
-      /** 缓存运算结果提高性能 */
-      if (!media.dataset.mcgs) {
+      /** 判断媒体是否需要受控，性能优化：缓存计算结果 */
+      if (!mediasControlled.has(media)) {
         const shouldControl = isMatchSelectorFn(media, selectorFn);
-        media.dataset.mcgs = shouldControl ? "true" : "false";
-        set.add(new WeakRef(media));
+        mediasControlled.set(media, shouldControl ? true : false);
+        medias.add(new WeakRef(media));
       }
-      const shouldControl = media.dataset.mcgs;
-
+      const shouldControl = mediasControlled.get(media);
       if (!shouldControl) return;
 
       bc.postMessage(getMediaIdentifier(media));

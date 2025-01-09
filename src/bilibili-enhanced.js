@@ -115,6 +115,72 @@ const win = window;
       mediaControl.enableGlobalSoloPlaying(getBiliVideoElement);
     });
 
+    // * ---------------------------------------------------------------- playlist progress bar
+
+    {
+      // * ---------------- calculation
+
+      /**
+       * 因为 列表、children、时间标签 都是动态加载的，所以不容易做缓存什么的
+       * 简单的每次都计算，性能影响不会很大
+       *
+       * @param {HTMLElement} playlistEl
+       * @returns {[number,number]} [current time, total time]
+       */
+      const calcTime = (playlistEl) => {
+        const playlistItems = Array.from(playlistEl.querySelector(".video-pod__list")?.children);
+
+        const currentVideoIndex = playlistItems.findIndex((e) => e.classList.contains("active"));
+
+        // @ts-ignore
+        const timesList = playlistItems.map((e) => e.querySelector(".stat-item.duration")?.innerText).map((e) => progressBar.readable2sec(e));
+
+        return [
+          //
+          timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getBiliVideoElement()?.currentTime,
+          timesList.reduce((a, e) => a + e, 0),
+        ];
+      };
+
+      // * ---------------- start
+
+      const mediasFlag = new WeakMap();
+
+      /** 优化，仅当列表的媒体播放时，挂载一次 update 事件 */
+      document.addEventListener(
+        "play",
+        (e) => {
+          const media = e.target;
+          if (mediasFlag.has(media)) return;
+
+          const shouldControl = media === getBiliVideoElement();
+          if (!shouldControl) return mediasFlag.set(media, false);
+
+          const updateHandler = () => {
+            /** 注：仅合集类型的视频，有带视频长度信息的列表 */
+            /** @type {HTMLElement} */
+            const playlistEl = document.querySelector("#mirror-vdcon .video-pod");
+            if (!playlistEl) return;
+
+            const pb = progressBar;
+
+            if (!playlistEl.contains(pb.pbEl)) {
+              playlistEl.style.position = "relative";
+              Object.assign(pb.pbEl.style, { position: "absolute", top: "0", right: "0", width: "100%" });
+              Object.assign(pb.textEl.style, { left: "0", top: "-2px", transform: "translateY(-100%)", fontSize: "12px" });
+              playlistEl.appendChild(pb.pbEl);
+            }
+
+            const [currentTime, totalTime] = calcTime(playlistEl);
+            pb.updateProgressBar(currentTime, totalTime);
+          };
+          media.addEventListener("timeupdate", updateHandler);
+          mediasFlag.set(media, updateHandler);
+        },
+        true
+      );
+    }
+
     // * ---------------------------------------------------------------- playlist autoplay config
 
     {
@@ -169,8 +235,6 @@ const win = window;
       document.addEventListener(
         "play",
         (e) => {
-          if (!(e.target instanceof HTMLMediaElement)) return;
-
           const bvEl = getBiliVideoElement();
           if (e.target !== bvEl) return;
 
@@ -286,7 +350,7 @@ const win = window;
        * 我们上面已经调用 addEventListener 绑定好了一套快捷键。
        * 接着覆盖原生 addEventListener，当检测到关键按键时，停止函数执行。
        * 这样就能实现触发我们自己的快捷键，而不触发B站的快捷键。
-       * 不过因为拦截了很多功能，所以个别功能需要要自己实现
+       * 不过因为拦截了很多功能，所以个别功能需要要自己再实现一遍，比如 pswp 的快捷键
        */
       /**  */
 

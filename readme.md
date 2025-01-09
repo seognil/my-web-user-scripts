@@ -6,7 +6,7 @@
 
 用 JS + JSDoc 来写，不用 TS，不需要编译直接用，直接调试也方便，也能有简单的类型检查
 
-我用 [User JavaScript and CSS](https://chromewebstore.google.com/detail/user-javascript-and-css/nbhcbdghjpllgmfilhnhkllmkecfmpld) 这个插件来加载脚本，加载 css 也方便一点
+我用 [User JavaScript and CSS](https://chromewebstore.google.com/detail/user-javascript-and-css/nbhcbdghjpllgmfilhnhkllmkecfmpld) 这个插件来加载脚本，加载 css 也方便一点。（加载脚本需要勾选 Run at the start）
 
 写了两组工具函数，封装了一些常用功能。直接挂载到全局，不需要 import
 

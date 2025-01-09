@@ -11,6 +11,9 @@
 const win = window;
 
 {
+  // TODO 对复合活动页的支持有限，因为是位于 iframe 中，个别功能的逻辑目前失效  // Seognil LC 2025/01/09
+  // 而且本来活动页的功能和普通的播放页也不一样，比如也没有网页全屏按钮。以后有需要再说吧
+
   /**
    * 2025/01/07 更新
    * window.player：发现 B 站的播放器控件可以直接调用
@@ -88,12 +91,6 @@ const win = window;
 
   /** @returns {HTMLMediaElement | null} */
   const getBiliVideoElement = () => win.player.mediaElement();
-
-  /** @returns {HTMLElement} */
-  const getDanmuButton = () => win.player.getElements().container.querySelector(".bpx-player-dm-switch");
-
-  /** @returns {NodeListOf<HTMLElement>} */
-  const getDanmuLayer = () => win.player.getElements().videoArea.querySelectorAll(".bpx-player-row-dm-wrap, .bpx-player-cmd-dm-wrap");
 
   /** @returns {HTMLElement | null} */
   const getWebFullButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-web");
@@ -302,15 +299,10 @@ const win = window;
       // 播放列表跳转用 B 站原生实现，也是 [ ]，不用自己写逻辑了
       // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "[") || e.key === "PageUp") playlistJumpControl(-1);
       // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "]") || e.key === "PageUp") playlistJumpControl(1);
-      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") toggleDanmuLayer();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") toggleDanmaku();
       // * ---------------- fullscreen
-      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "t") {
-        getWebFullButton()?.click();
-        refreshDamnuLayer();
-      } else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "f") {
-        getScreenFullButton()?.click();
-        refreshDamnuLayer();
-      }
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "t") getWebFullButton()?.click();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "f") getScreenFullButton()?.click();
       // * ---------------- play time
       // TODO 重新播放可能有bug，会卡在第一帧画面，下次再碰到说 // Seognil LC 2025/01/08
       // TODO 有时候连续跳时间轴会卡顿，不知道什么原因，下次再碰到试试改成 player.seek 而不是直接 media.currentTime // Seognil LC 2025/01/08
@@ -391,26 +383,17 @@ const win = window;
 
     // * ================================================================================ Features
 
-    // * ---------------------------------------------------------------- danmu
-
-    let danmuShown = true;
-    const toggleDanmuLayer = () => {
-      danmuShown = !danmuShown;
-      refreshDamnuLayer();
-    };
+    // * ---------------------------------------------------------------- danmaku
 
     /**
-     * 采用软实现，只控制弹幕层的 opacity，不使用 B 站的实现完全关闭
-     * 切换全屏后，Dom 变化后需要重新设置，这里封装成一个方法来手动调用
+     * 采用软实现，只控制弹幕层的 opacity，不使用 B 站自带的实现（完全关闭弹幕层）
+     * 通过 toggle container className 和 css 来直接实现，多快好省
      */
-    const refreshDamnuLayer = () => {
-      const danmuButton = getDanmuButton();
-      const danmuLayer = getDanmuLayer();
-
-      // @ts-ignore
-      [danmuButton, ...danmuLayer].forEach((e) => (e.style.opacity = danmuShown ? 1 : 0));
-
-      toast(danmuShown ? "弹幕层开" : "弹幕层关");
+    const toggleDanmaku = () => {
+      const attachTarget = document.querySelector("#bilibili-player") ?? document.querySelector("#shinonome");
+      if (!attachTarget) return;
+      const hidden = attachTarget.classList.toggle("danmaku-hidden");
+      toast(hidden ? "弹幕层关" : "弹幕层开");
     };
 
     // * ---------------------------------------------------------------- speed control
@@ -439,7 +422,7 @@ const win = window;
 
       if (!toastEl) {
         toastEl = document.createElement("div");
-        toastEl.id = "lcdebug-toast"; // id for css binding
+        toastEl.id = "bc-toast"; // id for css binding
         container.appendChild(toastEl);
       }
 
@@ -481,4 +464,10 @@ const win = window;
    * @returns {HTMLInputElement}
    */
   const getHandoffPauseInput = () => document.getElementById("bilibili-player")?.querySelector(".bpx-player-ctrl-setting-handoff input[value='2']");
+
+  /** @returns {HTMLElement} */
+  const getDanmuButton = () => win.player.getElements().container.querySelector(".bpx-player-dm-switch");
+
+  /** @returns {NodeListOf<HTMLElement>} */
+  const getDanmuLayer = () => win.player.getElements().videoArea.querySelectorAll(".bpx-player-row-dm-wrap, .bpx-player-cmd-dm-wrap");
 }

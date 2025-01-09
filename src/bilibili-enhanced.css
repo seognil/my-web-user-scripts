@@ -15,6 +15,7 @@
     .bpx-player-row-dm-wrap,
     .bpx-player-cmd-dm-wrap {
       opacity: 0 !important;
+      user-select: none !important;
     }
   }
 }

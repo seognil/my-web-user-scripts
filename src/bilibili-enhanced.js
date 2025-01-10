@@ -118,8 +118,8 @@ const win = window;
       // * ---------------- calculation
 
       /**
-       * 因为 列表、children、时间标签 都是动态加载的，所以不容易做缓存什么的
-       * 简单的每次都计算，性能影响不会很大
+       * 因为 列表、children、时间标签 都是动态加载的，所以视频长度数据不容易做抓取和缓存
+       * 所以只是通过（在列表中） query 来抓取数据，性能已经很快了，一次完整计算不到 30 微秒
        *
        * @param {HTMLElement} playlistEl
        * @returns {[number,number]} [current time, total time]
@@ -127,7 +127,7 @@ const win = window;
       const calcTime = (playlistEl) => {
         const playlistItems = Array.from(playlistEl.querySelector(".video-pod__list")?.children);
 
-        const currentVideoIndex = playlistItems.findIndex((e) => e.classList.contains("active"));
+        const currentVideoIndex = playlistItems.findIndex((e) => e.matches(".active") || e.querySelector(".active"));
 
         // @ts-ignore
         const timesList = playlistItems.map((e) => e.querySelector(".stat-item.duration")?.innerText).map((e) => progressBar.readable2sec(e));

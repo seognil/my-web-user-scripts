@@ -89,13 +89,57 @@ const win = window;
     }
   };
 
-  /** @returns {HTMLMediaElement | null} */
+  const cleanUrlToClipboard = () => navigator.clipboard.writeText(getCleanUrl()).then(() => toast("复制地址"));
+
+  /** 视频截图到剪贴板 */
+  const snapshotToClipboard = () => {
+    const video = getBiliVideoElement();
+    if (!video) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]).then(() => toast("复制截图"));
+    });
+  };
+
+  /** @returns {HTMLVideoElement | null} */
   const getBiliVideoElement = () => win.player.mediaElement();
 
   /** @returns {HTMLElement | null} */
   const getWebFullButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-web");
   /** @returns {HTMLElement | null} */
   const getScreenFullButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-full");
+
+  // * ---------------------------------------------------------------- player custom toast
+
+  let toastTick = setTimeout(() => {});
+  let toastEl = null;
+
+  /** @param {string} text */
+  const toast = (text) => {
+    // * ---------------- prepare element
+
+    const container = getBiliVideoElement()?.parentElement;
+    if (!container) return null;
+
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.id = "bc-toast"; // id for css binding
+      container.appendChild(toastEl);
+    }
+
+    // * ---------------- action
+
+    toastEl.textContent = text;
+    toastEl.classList.add("shown");
+
+    clearTimeout(toastTick);
+    toastTick = setTimeout(() => toastEl?.classList.remove("shown"), 1000);
+  };
 
   // * ======================================================================================================================== Automation
 
@@ -289,10 +333,12 @@ const win = window;
       const speedRange = [0.125, 4];
 
       if (false) "";
-      // * ---------------- copy clean url
+      // * ---------------- copy clean url and snapshot
       else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "c") {
         e.preventDefault();
-        navigator.clipboard.writeText(getCleanUrl());
+        cleanUrlToClipboard();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") {
+        snapshotToClipboard();
       }
 
       // * ---------------- gui control
@@ -406,33 +452,6 @@ const win = window;
     const toastReplayStatus = () => {
       const isLooping = getBiliVideoElement()?.loop;
       toast(isLooping ? "开启循环" : "关闭循环");
-    };
-
-    // * ---------------------------------------------------------------- player custom toast
-
-    let toastTick = setTimeout(() => {});
-    let toastEl = null;
-
-    /** @param {string} text */
-    const toast = (text) => {
-      // * ---------------- prepare element
-
-      const container = getBiliVideoElement()?.parentElement;
-      if (!container) return null;
-
-      if (!toastEl) {
-        toastEl = document.createElement("div");
-        toastEl.id = "bc-toast"; // id for css binding
-        container.appendChild(toastEl);
-      }
-
-      // * ---------------- action
-
-      toastEl.textContent = text;
-      toastEl.classList.add("shown");
-
-      clearTimeout(toastTick);
-      toastTick = setTimeout(() => toastEl?.classList.remove("shown"), 1000);
     };
   }
 }

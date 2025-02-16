@@ -43,9 +43,9 @@ const win = window;
     /** 列表 电影 多集+PV */
     "2.2.": "https://www.bilibili.com/bangumi/play/ep1113416",
 
-    /** 列表 动画 */
+    /** 列表 动画（指向整个番剧） */
     "2.3.": "https://www.bilibili.com/bangumi/play/ss41410",
-    /** 列表 动画 */
+    /** 列表 动画（指向具体的集数） */
     "2.4.": "https://www.bilibili.com/bangumi/play/ep691614",
 
     /** 列表 up设定的合集 */
@@ -54,39 +54,62 @@ const win = window;
     "3.2.": "https://www.bilibili.com/video/BV1m1sreSEoh",
 
     /** 列表 单bv的分p；分p的情况还挺多的，比如也可以嵌套在下面的 /list/ 里 */
-    "3.4.": "https://www.bilibili.com/video/BV1hp4y1k7SV/",
+    "3.4.": "https://www.bilibili.com/video/BV1hp4y1k7SV/?p=1",
 
     /** 生成列表 收藏夹 */
     "4.1.": "https://www.bilibili.com/list/ml62693834?oid=973735712&bvid=BV1944y1B7MJ&p=3",
     /** 生成列表 稍后再看 */
     "4.2.": "https://www.bilibili.com/list/watchlater?oid=113431445249673&bvid=BV1M4DTYKEfs",
     /** 生成列表 up主页的播放全部 */
-    "4.3.": "https://www.bilibili.com/medialist/play/7980111?from=space&business=space&sort_field=pubtime",
+    // "4.3.": "https://www.bilibili.com/medialist/play/7980111?from=space&business=space&sort_field=pubtime",
+    /** 生成列表 up主页的播放全部（新格式） */
+    "4.4.": "https://www.bilibili.com/list/7980111?from=space&business=space&sort_field=pubtime",
 
     /** 评论区图片快捷键 */
     "8.1.": "https://www.bilibili.com/video/BV13FBEYgEfT",
 
     /** 活动页 复合结构 不常用 */
-    "9.1.": "https://www.bilibili.com/blackboard/activity-yXPfn575pD.html?spm_id_from=333.1007.0.0",
+    "9.1.": "https://www.bilibili.com/blackboard/activity-yXPfn575pD.html",
   };
 
   // * ========================================================================================================================
 
   /**
-   * 如果是ss开头而不是ep开头的剧集，实际上不会链接携带是哪一集的信息，不过也无所谓，很少会碰到复制番剧链接的情况
-   * 如果有分p，则获取分p
-   * 如果是生成列表，则从 search 获取 bvid
-   * 清除其他search
+   * 有一个bug，如果是番剧，ss地址指向的是番剧本身（根据用户上次观看 不确定集数），而ep指向的是具体集数
+   * 不过也无所谓，连播时切换集数就会变成ep地址，而且复制番剧链接的需求比较少见2
+   *
+   * - 如果是自制列表，需要特定的处理格式
+   * - 如果是各种生成列表，则从拼接 bvid + 分p
+   * - 其他情况直接清除search
    */
   const getCleanUrl = () => {
     const u = new URL(document.location.href);
-    const p = u.searchParams.get("p");
-    const cleanSearch = p ? `?p=${p}` : "";
-    if (/\/(list|medialist)\//.test(u.href)) {
-      return `https://www.bilibili.com/video/${u.searchParams.get("bvid")}${cleanSearch}`;
+    const bvid = u.searchParams.get("bvid");
+
+    const p = pickSearchParamsString(u.searchParams, ["p"]);
+    const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
+
+    if (/\/list\/(watchlater|ml)/.test(u.href)) {
+      return `https://www.bilibili.com/video/${bvid}/${p}`;
     } else {
       return u.href.replace(u.search, cleanSearch);
     }
+  };
+
+  /**
+   * @param {URLSearchParams} s
+   * @param {string[]} keys
+   * @return {string}
+   */
+  const pickSearchParamsString = (s, keys) => {
+    const nextS = new URLSearchParams();
+    keys.forEach((key) => {
+      const val = s.get(key);
+      if (val === null || val === undefined) return;
+      nextS.set(key, val);
+    });
+    const str = nextS.toString();
+    return str ? `?${str}` : "";
   };
 
   const cleanUrlToClipboard = () => navigator.clipboard.writeText(getCleanUrl()).then(() => toast("复制地址"));
@@ -176,9 +199,11 @@ const win = window;
         // @ts-ignore
         const timesList = playlistItems.map((e) => e.querySelector(".stat-item.duration")?.innerText).map((e) => progressBar.readable2sec(e));
 
+        // TODO B站的多级分类列表现在没法全部获取求和，要不要想想办法通过直接抓数据来获取？ // Seognil LC 2025/01/20
+
         return [
           //
-          timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getBiliVideoElement()?.currentTime,
+          currentVideoIndex === -1 ? 0 : timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getBiliVideoElement()?.currentTime,
           timesList.reduce((a, e) => a + e, 0),
         ];
       };

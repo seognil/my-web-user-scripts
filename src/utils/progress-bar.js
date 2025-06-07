@@ -22,7 +22,11 @@ const progressBar = (() => {
 
   const textEl = document.createElement("span");
   pbEl.appendChild(textEl);
-  Object.assign(textEl.style, { position: "absolute", top: "2px", right: "2px", fontSize: "10px" });
+  Object.assign(textEl.style, { position: "absolute", top: "2px", right: "2px", fontSize: "10px", cursor: "pointer" });
+  textEl.addEventListener("click", () => {
+    const totalTime = textEl.textContent.split("/").at(1)?.trim();
+    navigator.clipboard.writeText(totalTime);
+  });
 
   // * ----------------
 

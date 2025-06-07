@@ -1,7 +1,7 @@
 // export { mediaControl };
 
 const mediaControl = (() => {
-  // * ----------------
+  // * ---------------- utils
 
   /**
    * @param {number} v
@@ -25,7 +25,7 @@ const mediaControl = (() => {
   // @ts-ignore
   const getMediaAll = () => [...document.getElementsByTagName("video"), ...document.getElementsByTagName("audio")];
 
-  // * ----------------
+  // * ---------------- 音量
 
   /**
    * 手动音量倍率放大，解决有些源声音太小的问题
@@ -228,6 +228,24 @@ const mediaControl = (() => {
       }, duration);
     });
 
+  // * ---------------- 截图
+
+  /**
+   * @param {HTMLVideoElement} video
+   * @returns {Promise<void>}
+   */
+  const videoSnap = (video) =>
+    new Promise((res) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]).then(() => res());
+      });
+    });
+
   // * ---------------- export
 
   /**
@@ -249,5 +267,7 @@ const mediaControl = (() => {
     togglePlaybackSpeed,
 
     SoundBeep,
+
+    videoSnap,
   };
 })();

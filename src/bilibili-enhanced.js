@@ -56,6 +56,10 @@ const win = window;
     /** 列表 单bv的分p；分p的情况还挺多的，比如也可以嵌套在下面的 /list/ 里 */
     "3.4.": "https://www.bilibili.com/video/BV1hp4y1k7SV/?p=1",
 
+    /** 多p 嵌套列表 */
+    "3.5.": "https://www.bilibili.com/video/BV1EP41167eq",
+    "3.6.": "https://www.bilibili.com/video/BV1EP41167eq?p=4",
+
     /** 生成列表 收藏夹 */
     "4.1.": "https://www.bilibili.com/list/ml62693834?oid=973735712&bvid=BV1944y1B7MJ&p=3",
     /** 生成列表 稍后再看 */
@@ -78,21 +82,27 @@ const win = window;
    * 有一个bug，如果是番剧，ss地址指向的是番剧本身（根据用户上次观看 不确定集数），而ep指向的是具体集数
    * 不过也无所谓，连播时切换集数就会变成ep地址，而且复制番剧链接的需求比较少见2
    *
-   * - 如果是自制列表，需要特定的处理格式
-   * - 如果是各种生成列表，则从拼接 bvid + 分p
-   * - 其他情况直接清除search
+   * - 如果是私有列表，仅抓取 bvid
+   * - 如果是公开的列表，仅抓取 bvid（目前只有播放全部）
+   * - 其他情况（单视频等但是可能会有多p之类的参数）清理 search
    */
   const getCleanUrl = () => {
     const u = new URL(document.location.href);
-    const bvid = u.searchParams.get("bvid");
 
+    const bvid = u.searchParams.get("bvid");
     const p = pickSearchParamsString(u.searchParams, ["p"]);
+
     const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
 
+    const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
+    const cleanUrl = u.href.replace(u.search, cleanSearch);
+
     if (/\/list\/(watchlater|ml)/.test(u.href)) {
-      return `https://www.bilibili.com/video/${bvid}/${p}`;
+      return bvidUrl;
+    } else if (/\/list\//.test(u.href)) {
+      return bvidUrl;
     } else {
-      return u.href.replace(u.search, cleanSearch);
+      return cleanUrl;
     }
   };
 
@@ -119,14 +129,7 @@ const win = window;
     const video = getBiliVideoElement();
     if (!video) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob((blob) => {
-      navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]).then(() => toast("复制截图"));
-    });
+    mediaControl.videoSnap(video).then(() => toast("复制截图"));
   };
 
   /** @returns {HTMLVideoElement | null} */
@@ -192,9 +195,11 @@ const win = window;
        * @returns {[number,number]} [current time, total time]
        */
       const calcTime = (playlistEl) => {
-        const playlistItems = Array.from(playlistEl.querySelector(".video-pod__list")?.children);
+        const currentVideoItem = playlistEl.querySelector(".simple-base-item.page-item.active, .simple-base-item.video-pod__item.active");
 
-        const currentVideoIndex = playlistItems.findIndex((e) => e.matches(".active") || e.querySelector(".active"));
+        const playlistItems = Array.from(currentVideoItem.parentElement.children);
+
+        const currentVideoIndex = playlistItems.findIndex((e) => e === currentVideoItem || e.matches(".active"));
 
         // @ts-ignore
         const timesList = playlistItems.map((e) => e.querySelector(".stat-item.duration")?.innerText).map((e) => progressBar.readable2sec(e));

@@ -1,5 +1,5 @@
 {
-  /** @return {HTMLMediaElement} */
+  /** @return {HTMLVideoElement} */
   const getVideo = () => document.querySelector("#movie_player video");
 
   // * ---------------------------------------------------------------- hotkey
@@ -15,6 +15,7 @@
       else if (e.key === "Backspace") mediaControl.setPlaybackJumpToPercent(ytbVideo, 0);
       else if (e.key === "[" || e.key === "PageUp") e.preventDefault(), playlistJump(-1);
       else if (e.key === "]" || e.key === "PageDown") e.preventDefault(), playlistJump(1);
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") mediaControl.videoSnap(ytbVideo);
     });
 
     // * ---------------- playlist control

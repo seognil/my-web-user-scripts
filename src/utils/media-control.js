@@ -1,7 +1,7 @@
 // export { mediaControl };
 
 const mediaControl = (() => {
-  // * ---------------- utils
+  // * ---------------------------------------------------------------- utils
 
   /**
    * @param {number} v
@@ -25,7 +25,7 @@ const mediaControl = (() => {
   // @ts-ignore
   const getMediaAll = () => [...document.getElementsByTagName("video"), ...document.getElementsByTagName("audio")];
 
-  // * ---------------- 音量
+  // * ---------------------------------------------------------------- 音量
 
   /**
    * 手动音量倍率放大，解决有些源声音太小的问题
@@ -51,7 +51,7 @@ const mediaControl = (() => {
     });
   };
 
-  // * ---------------- 播放 跳转
+  // * ---------------------------------------------------------------- 播放 跳转
 
   /**
    * @param {HTMLMediaElement} media
@@ -76,9 +76,48 @@ const mediaControl = (() => {
     media.currentTime = inRange(media.currentTime + delta, [0, media.duration]);
   };
 
-  // * ---------------- 自动暂停其他标签
+  // * ---------------------------------------------------------------- 循环播放
 
-  const bc = new BroadcastChannel("media-control");
+  /**
+   * 切换循环，可以指定传参，也可以自动切换
+   * 当开启循环时，如果当前为播放结束，则视为要重新自动播放
+   * @param {HTMLMediaElement} media
+   * @param {boolean} [state]
+   */
+  const setReplayLoop = (media, state) => {
+    const shouldLoop = state ?? !media.loop;
+    media.loop = shouldLoop;
+
+    if (shouldLoop && media.ended) media.play();
+  };
+
+  // * ---------------------------------------------------------------- 播放速度
+
+  /** default rated speed value */
+  let lastSpeed = 1.75;
+
+  /**
+   * 增减播放速度
+   * @param {HTMLMediaElement} media
+   * @param {number} delta
+   * @param {[number,number]} range
+   */
+  const setPlaybackSpeedBy = (media, delta, range) => {
+    const nextSpeed = inRange(media.playbackRate + delta, range);
+    media.playbackRate = nextSpeed;
+    if (nextSpeed != 1) lastSpeed = nextSpeed;
+  };
+
+  /**
+   * 切换播放速度
+   * @param {HTMLMediaElement} media
+   */
+  const togglePlaybackSpeed = (media) => {
+    const curSpeed = media.playbackRate;
+    media.playbackRate = curSpeed === 1 ? lastSpeed : 1;
+  };
+
+  // * ---------------------------------------------------------------- 自动暂停其他标签
 
   /**
    * 播放标识，由 页面加载时间（用来简单识别为不同的页面）、页面URL、媒体src 构成
@@ -118,20 +157,7 @@ const mediaControl = (() => {
   /** @type {WeakMap<HTMLMediaElement,boolean>} */
   const mediasControlled = new WeakMap();
 
-  bc.addEventListener("message", ({ data }) => {
-    medias.forEach((e) => {
-      const media = e.deref();
-
-      if (!media) return medias.delete(e);
-
-      if (media.paused) return;
-
-      /** 或许由于 BroadcastChannel的机制，这个不可能会相同，不过还是检查一下以防万一 */
-      if (!isSameMediaIdentifier(data, getMediaIdentifier(media))) {
-        media.pause();
-      }
-    });
-  });
+  // * ----------------
 
   /**
    * 当有多个页面一起播放时，播放当前的媒体则自动暂停其他标签页的媒体
@@ -143,6 +169,25 @@ const mediaControl = (() => {
    * @param { () => HTMLMediaElement | ArrayLike<HTMLMediaElement> | void } [selectorFn]
    */
   const enableGlobalSoloPlaying = (selectorFn = getMediaAll) => {
+    const pauseOthersBy = (mediaIds) => {
+      medias.forEach((e) => {
+        const media = e.deref();
+
+        if (!media) return medias.delete(e);
+
+        if (media.paused) return;
+
+        /** 或许由于 BroadcastChannel的机制，这个不可能会相同，不过还是检查一下以防万一 */
+        if (!isSameMediaIdentifier(mediaIds, getMediaIdentifier(media))) {
+          media.pause();
+        }
+      });
+    };
+
+    const bc = new BroadcastChannel("media-control");
+
+    bc.addEventListener("message", ({ data }) => pauseOthersBy(data));
+
     /** @param {Event} e */
     const handler = (e) => {
       const media = e.target;
@@ -157,7 +202,10 @@ const mediaControl = (() => {
       const shouldControl = mediasControlled.get(media);
       if (!shouldControl) return;
 
-      bc.postMessage(getMediaIdentifier(media));
+      /** 暂停其他标签页受控视频，暂停本页其他受控视频 */
+      const mediaIds = getMediaIdentifier(media);
+      bc.postMessage(mediaIds);
+      pauseOthersBy(mediaIds);
     };
 
     document.addEventListener("play", handler, true);
@@ -166,48 +214,40 @@ const mediaControl = (() => {
     return () => document.removeEventListener("play", handler);
   };
 
-  // * ---------------- 循环播放
+  // * ---------------------------------------------------------------- toast
+
+  let toastTick = setTimeout(() => {});
+
+  /** <container, toastEl> */
+  const toastEls = new WeakMap();
 
   /**
-   * 切换循环，可以指定传参，也可以自动切换
-   * 当开启循环时，如果当前为播放结束，则视为要重新自动播放
-   * @param {HTMLMediaElement} media
-   * @param {boolean} [state]
+   * @param {HTMLElement} container
+   * @param {string} text
    */
-  const setReplayLoop = (media, state) => {
-    const shouldLoop = state ?? !media.loop;
-    media.loop = shouldLoop;
+  const toast = (container, text) => {
+    // * ---------------- prepare element
 
-    if (shouldLoop && media.ended) media.play();
+    if (!container) return null;
+
+    if (!toastEls.get(container)) {
+      const toastEl = document.createElement("div");
+      toastEl.classList.add("mc-toast"); // id for css binding
+      container.appendChild(toastEl);
+      toastEls.set(container, toastEl);
+    }
+
+    // * ---------------- action
+
+    const toastEl = toastEls.get(container);
+    toastEl.textContent = text;
+    toastEl.classList.add("shown");
+
+    clearTimeout(toastTick);
+    toastTick = setTimeout(() => toastEl?.classList.remove("shown"), 1000);
   };
 
-  // * ---------------- 播放速度
-
-  /** default rated speed value */
-  let lastSpeed = 1.75;
-
-  /**
-   * 增减播放速度
-   * @param {HTMLMediaElement} media
-   * @param {number} delta
-   * @param {[number,number]} range
-   */
-  const setPlaybackSpeedBy = (media, delta, range) => {
-    const nextSpeed = inRange(media.playbackRate + delta, range);
-    media.playbackRate = nextSpeed;
-    if (nextSpeed != 1) lastSpeed = nextSpeed;
-  };
-
-  /**
-   * 切换播放速度
-   * @param {HTMLMediaElement} media
-   */
-  const togglePlaybackSpeed = (media) => {
-    const curSpeed = media.playbackRate;
-    media.playbackRate = curSpeed === 1 ? lastSpeed : 1;
-  };
-
-  // * ---------------- sound beep
+  // * ---------------------------------------------------------------- sound beep
 
   /**
    * 简单的 beep 声，可以用来做操作提示
@@ -228,7 +268,7 @@ const mediaControl = (() => {
       }, duration);
     });
 
-  // * ---------------- 截图
+  // * ---------------------------------------------------------------- 截图
 
   /**
    * @param {HTMLVideoElement} video
@@ -246,7 +286,7 @@ const mediaControl = (() => {
       });
     });
 
-  // * ---------------- export
+  // * ---------------------------------------------------------------- export
 
   /**
    * 播放列表控制每个网站都不一样，还有网页全屏之类的功能，用模拟点击网页按钮来实现
@@ -265,6 +305,8 @@ const mediaControl = (() => {
     setReplayLoop,
     setPlaybackSpeedBy,
     togglePlaybackSpeed,
+
+    toast,
 
     SoundBeep,
 

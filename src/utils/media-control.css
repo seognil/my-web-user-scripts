@@ -1,0 +1,22 @@
+.mc-toast {
+  position: absolute;
+  bottom: 150px;
+  left: 10px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background-color: hsla(0, 0%, 0%, 0.5);
+  color: white;
+  z-index: 999;
+  font-size: 20px;
+
+  transition-duration: 100ms;
+  user-select: none;
+  opacity: 0;
+
+  &.shown {
+    opacity: 1;
+  }
+}

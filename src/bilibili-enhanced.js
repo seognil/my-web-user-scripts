@@ -142,30 +142,8 @@ const win = window;
 
   // * ---------------------------------------------------------------- player custom toast
 
-  let toastTick = setTimeout(() => {});
-  let toastEl = null;
-
   /** @param {string} text */
-  const toast = (text) => {
-    // * ---------------- prepare element
-
-    const container = getBiliVideoElement()?.parentElement;
-    if (!container) return null;
-
-    if (!toastEl) {
-      toastEl = document.createElement("div");
-      toastEl.id = "bc-toast"; // id for css binding
-      container.appendChild(toastEl);
-    }
-
-    // * ---------------- action
-
-    toastEl.textContent = text;
-    toastEl.classList.add("shown");
-
-    clearTimeout(toastTick);
-    toastTick = setTimeout(() => toastEl?.classList.remove("shown"), 1000);
-  };
+  const toast = (text) => mediaControl.toast(getBiliVideoElement()?.parentElement, text);
 
   // * ======================================================================================================================== Automation
 

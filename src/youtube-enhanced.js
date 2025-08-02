@@ -1,6 +1,84 @@
 {
-  /** @return {HTMLVideoElement} */
-  const getVideo = () => document.querySelector("#movie_player video");
+  // * ---------------------------------------------------------------- situations
+
+  const s = {
+    //
+    /**
+     * channel's home, mini player
+     * https://www.youtube.com/@MrBeast
+     */
+    1: "#container > #c4-player > .html5-video-container > video[src]",
+
+    /**
+     * main player, mini player
+     * https://www.youtube.com/watch?v=mwKJfNYwvm8
+     */
+    2: "#container > #movie_player > .html5-video-container > video[src]",
+
+    /**
+     * short player
+     * https://www.youtube.com/shorts/V6In4tmd-w8
+     */
+    3: "#container > #shorts-player > .html5-video-container > video[src]",
+  };
+
+  // * ---------------------------------------------------------------- get video elements
+
+  const getVideos = () => {
+    /** @type {HTMLVideoElement} */
+    const channelVideo = document.querySelector("#c4-player video");
+    /** @type {HTMLVideoElement} */
+    const shortVideo = document.querySelector("#shorts-player video");
+    /** @type {HTMLVideoElement} */
+    const normalVideo = document.querySelector("#movie_player video");
+
+    const href = location.href;
+
+    /** 主 video */
+    const main = (href.includes("youtube.com/@") ? channelVideo : href.includes("youtube.com/shorts") ? shortVideo : normalVideo) ?? normalVideo;
+
+    /** 所有 video 元素 */
+    const videos = [channelVideo, shortVideo, normalVideo].filter((e) => e);
+
+    return { main, videos };
+  };
+
+  // * ---------------------------------------------------------------- global solo playing
+
+  document.addEventListener("DOMContentLoaded", () => {
+    mediaControl.enableGlobalSoloPlaying(() => getVideos().videos);
+  });
+
+  // * ---------------------------------------------------------------- auto set resolution
+
+  {
+    const setResolution = () => {
+      const maxHqLimit = [
+        //
+        // "hd2160",
+        "hd1440",
+        "hd1080",
+        "hd720",
+      ];
+
+      const node = document.querySelector("#movie_player");
+      /** @type string[] */
+      // @ts-ignore
+      const resolutions = node.getAvailableQualityLevels();
+      const nextRes = resolutions.find((e) => maxHqLimit.includes(e));
+
+      // @ts-ignore
+      node.setPlaybackQualityRange(nextRes);
+    };
+
+    domObserverOnce("#movie_player", (node) => {
+      /** after initial page load */
+      setResolution();
+
+      /** after video src changed */
+      node.querySelector("video").addEventListener("loadstart", setResolution);
+    });
+  }
 
   // * ---------------------------------------------------------------- hotkey
 
@@ -8,14 +86,54 @@
     document.addEventListener("keydown", (e) => {
       if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")) return;
 
-      const ytbVideo = getVideo();
+      const ytbVideo = getVideos().main;
       if (!ytbVideo) return;
 
+      // * ----------------
+
+      const mc = mediaControl;
+      const jumpStep = 1;
+      const speedStep = 0.125;
+      /** @type [number,number] */
+      const speedRange = [0.125, 4];
+
+      // * ----------------
+
+      /** @param {string} text */
+      const toast = (text) => mediaControl.toast(ytbVideo.parentElement.parentElement, text);
+
+      /** @param {HTMLVideoElement} video */
+      const toastPlaybackSpeed = (video) => {
+        const curRatio = video?.playbackRate;
+        curRatio && toast("倍速 " + curRatio.toFixed(3).replace(/\.?0+$/, ""));
+      };
+
+      // * ----------------
+
       if (false) "";
-      else if (e.key === "Backspace") mediaControl.setPlaybackJumpToPercent(ytbVideo, 0);
+      // * ---------------- playlist
       else if (e.key === "[" || e.key === "PageUp") e.preventDefault(), playlistJump(-1);
       else if (e.key === "]" || e.key === "PageDown") e.preventDefault(), playlistJump(1);
-      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") mediaControl.videoSnap(ytbVideo);
+      // * ---------------- play speed
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "z") {
+        mc.setPlaybackSpeedBy(ytbVideo, -speedStep, speedRange);
+        toastPlaybackSpeed(ytbVideo);
+      } else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "x") {
+        mc.setPlaybackSpeedBy(ytbVideo, +speedStep, speedRange);
+        toastPlaybackSpeed(ytbVideo);
+      } else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "v") {
+        mc.togglePlaybackSpeed(ytbVideo);
+        toastPlaybackSpeed(ytbVideo);
+      }
+      // * ---------------- jump
+      else if (e.key === "Backspace") mediaControl.setPlaybackJumpToPercent(ytbVideo, 0);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "q") mc.setPlaybackJumpBySec(ytbVideo, -jumpStep);
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "e") mc.setPlaybackJumpBySec(ytbVideo, +jumpStep);
+      // * ---------------- snap
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") {
+        mediaControl.videoSnap(ytbVideo);
+        toast("复制截图");
+      }
     });
 
     // * ---------------- playlist control
@@ -54,7 +172,7 @@
 
       return [
         //
-        timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getVideo()?.currentTime,
+        timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getVideos().main?.currentTime,
         timesList.reduce((a, e) => a + e, 0),
       ];
     };
@@ -70,7 +188,7 @@
         const media = e.target;
         if (mediasFlag.has(media)) return;
 
-        const shouldControl = media === getVideo();
+        const shouldControl = media === getVideos().main;
         if (!shouldControl) return mediasFlag.set(media, false);
 
         const updateHandler = () => {

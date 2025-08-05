@@ -117,7 +117,7 @@ const mediaControl = (() => {
     media.playbackRate = curSpeed === 1 ? lastSpeed : 1;
   };
 
-  // * ---------------------------------------------------------------- 自动暂停其他标签
+  // * ---------------------------------------------------------------- 自动暂停其他标签页和本页其他视频
 
   /**
    * 播放标识，由 页面加载时间（用来简单识别为不同的页面）、页面URL、媒体src 构成
@@ -209,6 +209,13 @@ const mediaControl = (() => {
     };
 
     document.addEventListener("play", handler, true);
+
+    /** youtube initial autoplay won't trigger play event, fix for it */
+    const onceHandler = (e) => {
+      handler(e);
+      document.removeEventListener("playing", onceHandler, true);
+    };
+    document.addEventListener("playing", onceHandler, true);
 
     /** disconnect fn */
     return () => document.removeEventListener("play", handler);

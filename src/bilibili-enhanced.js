@@ -195,9 +195,8 @@ const win = window;
 
       const mediasFlag = new WeakMap();
 
-      /** 优化，仅当列表的媒体播放时，挂载一次 update 事件 */
       document.addEventListener(
-        "play",
+        "loadstart",
         (e) => {
           const media = e.target;
           if (mediasFlag.has(media)) return;

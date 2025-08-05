@@ -35,7 +35,7 @@
     const href = location.href;
 
     /** 主 video */
-    const main = (href.includes("youtube.com/@") ? channelVideo : href.includes("youtube.com/shorts") ? shortVideo : normalVideo) ?? normalVideo;
+    const main = href.includes("youtube.com/@") ? channelVideo : href.includes("youtube.com/shorts") ? shortVideo : normalVideo;
 
     /** 所有 video 元素 */
     const videos = [channelVideo, shortVideo, normalVideo].filter((e) => e);
@@ -181,9 +181,8 @@
 
     const mediasFlag = new WeakMap();
 
-    /** 优化，仅当媒体播放时，挂载一次 update 事件 */
     document.addEventListener(
-      "play",
+      "loadstart",
       (e) => {
         const media = e.target;
         if (mediasFlag.has(media)) return;

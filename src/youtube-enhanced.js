@@ -49,6 +49,39 @@
     mediaControl.enableGlobalSoloPlaying(() => getVideos().videos);
   });
 
+  // * ---------------------------------------------------------------- keep youtube actived and non stop
+
+  {
+    /** while playing, press F32 every 10 mins */
+
+    let ticker;
+    const bust = () => document.dispatchEvent(new KeyboardEvent("keyup", { keyCode: 143 }));
+    document.addEventListener(
+      "play",
+      () => {
+        bust();
+        clearInterval(ticker);
+        ticker = setInterval(bust, 600000);
+      },
+      true
+    );
+    document.addEventListener("pause", () => clearInterval(ticker), true);
+  }
+
+  // document.addEventListener(
+  //   "pause",
+  //   (e) => {
+  //     const popup = document.querySelector("ytd-popup-container tp-yt-paper-dialog");
+  //     const text = popup.querySelector("tp-yt-paper-dialog-scrollable yt-formatted-string")?.textContent;
+  //     // @ts-ignore
+  //     if (popup?.style.display !== "none" && text?.includes("Video paused. Continue watching?")) {
+  //       // @ts-ignore
+  //       popup.querySelector("#confirm-button button")?.click();
+  //     }
+  //   },
+  //   true
+  // );
+
   // * ---------------------------------------------------------------- auto set resolution
 
   {
@@ -130,7 +163,7 @@
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "q") mc.setPlaybackJumpBySec(ytbVideo, -jumpStep);
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "e") mc.setPlaybackJumpBySec(ytbVideo, +jumpStep);
       // * ---------------- snap
-      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") {
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
         mediaControl.videoSnap(ytbVideo);
         toast("复制截图");
       }

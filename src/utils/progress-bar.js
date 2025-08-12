@@ -1,4 +1,4 @@
-const progressBar = (() => {
+var progressBar = (() => {
   // * ----------------
 
   /** Failed to set the 'innerHTML' property on 'Element': This document requires 'TrustedHTML' assignment. */

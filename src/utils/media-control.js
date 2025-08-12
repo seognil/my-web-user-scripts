@@ -1,6 +1,6 @@
 // export { mediaControl };
 
-const mediaControl = (() => {
+var mediaControl = (() => {
   // * ---------------------------------------------------------------- utils
 
   /**

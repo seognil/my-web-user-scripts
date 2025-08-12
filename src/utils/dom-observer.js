@@ -8,7 +8,7 @@
  * @param {string} selector
  * @param {(node: HTMLElement) => void} callback
  */
-const domObserverAll = (selector, callback) => {
+var domObserverAll = (selector, callback) => {
   const set = new WeakSet();
 
   /** @param  {Element} node */
@@ -43,7 +43,7 @@ const domObserverAll = (selector, callback) => {
  * @param {string} selector
  * @param {(node: HTMLElement) => void} callback
  */
-const domObserverOnce = (selector, callback) => {
+var domObserverOnce = (selector, callback) => {
   const node = document.querySelector(selector);
   if (node) {
     // @ts-ignore
@@ -76,7 +76,7 @@ const domObserverOnce = (selector, callback) => {
  * @param {HTMLElement} node
  * @param {(node: HTMLElement) => void} callback
  */
-const domObserverNodeRemoved = (node, callback) => {
+var domObserverNodeRemoved = (node, callback) => {
   const observer = new MutationObserver((mutationList) => {
     mutationList.forEach((mutation) => {
       mutation.removedNodes.forEach((n) => {
@@ -102,7 +102,7 @@ const domObserverNodeRemoved = (node, callback) => {
  * @param {string[]} selectors
  * @returns {Promise<void>}
  */
-const pendingSelectors = (selectors) => {
+var pendingSelectors = (selectors) => {
   /** @type (true|string)[] */
   const states = [...selectors];
 

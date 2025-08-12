@@ -341,10 +341,10 @@ const win = window;
 
       if (false) "";
       // * ---------------- copy clean url and snapshot
-      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "c") {
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         cleanUrlToClipboard();
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "s") {
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
         snapshotToClipboard();
       }
 

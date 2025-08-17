@@ -113,6 +113,26 @@
     });
   }
 
+  // * ---------------------------------------------------------------- get caption
+
+  let captionUrl;
+
+  const obs = new PerformanceObserver((list) => {
+    /** get caption url directly, it has poToken and works */
+    const url = list.getEntries().find((e) => e.name.includes("/api/timedtext"))?.name;
+    if (url) captionUrl = url;
+  });
+  obs.observe({ entryTypes: ["resource"] });
+
+  const copyCaption = async () => {
+    if (!captionUrl) return;
+    const res = await fetch(captionUrl).then((e) => e.text());
+    const captionText = JSON.parse(res)
+      .events.map((e) => e.segs?.map((e) => e.utf8).join(""))
+      .join("");
+    navigator.clipboard.writeText(captionText);
+  };
+
   // * ---------------------------------------------------------------- hotkey
 
   {
@@ -166,6 +186,12 @@
       else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
         mediaControl.videoSnap(ytbVideo);
         toast("复制截图");
+      }
+      // * ---------------- caption
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        copyCaption();
+        toast("复制字幕");
       }
     });
 

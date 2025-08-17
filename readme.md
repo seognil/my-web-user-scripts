@@ -31,6 +31,7 @@
 [code](./src/youtube-enhanced.js)
 
 - 新增的快捷键
+  - `Cmd + Shift + d` 复制字幕
   - `Cmd + Shift + s` 截图当前画面
   - `[`, `]` 切换列表上下集
   - `Backspace` 从头播放

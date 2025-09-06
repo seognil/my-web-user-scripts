@@ -1,4 +1,4 @@
-var progressBar = (() => {
+var makeProgressBar = () => {
   // * ----------------
 
   /** Failed to set the 'innerHTML' property on 'Element': This document requires 'TrustedHTML' assignment. */
@@ -22,7 +22,7 @@ var progressBar = (() => {
 
   const textEl = document.createElement("span");
   pbEl.appendChild(textEl);
-  Object.assign(textEl.style, { position: "absolute", top: "2px", right: "2px", fontSize: "10px", cursor: "pointer" });
+  Object.assign(textEl.style, { position: "absolute", top: "2px", right: "2px", fontSize: "10px", cursor: "pointer", display: "inline-table" });
   textEl.addEventListener("click", () => {
     const totalTime = textEl.textContent.split("/").at(1)?.trim();
     navigator.clipboard.writeText(totalTime);
@@ -72,4 +72,6 @@ var progressBar = (() => {
     readable2sec,
     sec2readable,
   };
-})();
+};
+
+var progressBar = makeProgressBar();

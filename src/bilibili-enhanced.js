@@ -1,5 +1,3 @@
-// import "./utils/media-control";
-
 /**
  * @typedef {Object} GlobalThings
  * @property {Object} player B 站的播放器控件
@@ -89,19 +87,14 @@ const win = window;
   const getCleanUrl = () => {
     const u = new URL(document.location.href);
 
-    const bvid = u.searchParams.get("bvid");
-    const p = pickSearchParamsString(u.searchParams, ["p"]);
-
-    const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
-
-    const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
-    const cleanUrl = u.href.replace(u.search, cleanSearch);
-
-    if (/\/list\/(watchlater|ml)/.test(u.href)) {
-      return bvidUrl;
-    } else if (/\/list\//.test(u.href)) {
+    if (/\/list\//.test(u.href)) {
+      const bvid = u.searchParams.get("bvid");
+      const p = pickSearchParamsString(u.searchParams, ["p"]);
+      const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
       return bvidUrl;
     } else {
+      const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
+      const cleanUrl = u.href.replace(u.search, cleanSearch);
       return cleanUrl;
     }
   };
@@ -109,7 +102,7 @@ const win = window;
   /**
    * @param {URLSearchParams} s
    * @param {string[]} keys
-   * @return {string}
+   * @return {string} => ?key1=val1&key2=val2
    */
   const pickSearchParamsString = (s, keys) => {
     const nextS = new URLSearchParams();
@@ -160,75 +153,6 @@ const win = window;
       mediaControl.enableGlobalSoloPlaying(getBiliVideoElement);
     });
 
-    // * ---------------------------------------------------------------- playlist progress bar
-
-    {
-      // * ---------------- calculation
-
-      /**
-       * 因为 列表、children、时间标签 都是动态加载的，所以视频长度数据不容易做抓取和缓存
-       * 所以只是通过（在列表中） query 来抓取数据，性能已经很快了，一次完整计算不到 30 微秒
-       *
-       * @param {HTMLElement} playlistEl
-       * @returns {[number,number]} [current time, total time]
-       */
-      const calcTime = (playlistEl) => {
-        const currentVideoItem = playlistEl.querySelector(".simple-base-item.page-item.active, .simple-base-item.video-pod__item.active");
-
-        const playlistItems = Array.from(currentVideoItem.parentElement.children);
-
-        const currentVideoIndex = playlistItems.findIndex((e) => e === currentVideoItem || e.matches(".active"));
-
-        // @ts-ignore
-        const timesList = playlistItems.map((e) => e.querySelector(".stat-item.duration")?.innerText).map((e) => progressBar.readable2sec(e));
-
-        // TODO B站的多级分类列表现在没法全部获取求和，要不要想想办法通过直接抓数据来获取？ // Seognil LC 2025/01/20
-
-        return [
-          //
-          currentVideoIndex === -1 ? 0 : timesList.slice(0, currentVideoIndex).reduce((a, e) => a + e, 0) + getBiliVideoElement()?.currentTime,
-          timesList.reduce((a, e) => a + e, 0),
-        ];
-      };
-
-      // * ---------------- start
-
-      const mediasFlag = new WeakMap();
-
-      document.addEventListener(
-        "loadstart",
-        (e) => {
-          const media = e.target;
-          if (mediasFlag.has(media)) return;
-
-          const shouldControl = media === getBiliVideoElement();
-          if (!shouldControl) return mediasFlag.set(media, false);
-
-          const updateHandler = () => {
-            /** 注：仅合集类型的视频，有带视频长度信息的列表 */
-            /** @type {HTMLElement} */
-            const playlistEl = document.querySelector("#mirror-vdcon .video-pod");
-            if (!playlistEl) return;
-
-            const pb = progressBar;
-
-            if (!playlistEl.contains(pb.pbEl)) {
-              playlistEl.style.position = "relative";
-              Object.assign(pb.pbEl.style, { position: "absolute", top: "0", right: "0", width: "100%" });
-              Object.assign(pb.textEl.style, { left: "0", top: "-2px", transform: "translateY(-100%)", fontSize: "12px" });
-              playlistEl.appendChild(pb.pbEl);
-            }
-
-            const [currentTime, totalTime] = calcTime(playlistEl);
-            pb.updateProgressBar(currentTime, totalTime);
-          };
-          media.addEventListener("timeupdate", updateHandler);
-          mediasFlag.set(media, updateHandler);
-        },
-        true
-      );
-    }
-
     // * ---------------------------------------------------------------- playlist autoplay config
 
     {
@@ -244,7 +168,7 @@ const win = window;
             /** 合集模式：up设定的视频合集 */
             document.querySelector("#app .right-container .video-pod") ??
             /** 临时化的列表：收藏夹 稍后再看 播放全部 （这个 query 其实性能很好） */
-            document.querySelector("#app .playlist-container--right .action-list-container #playlist-video-action-list-body")
+            document.querySelector("#app .playlist-container--right .action-list-container #playlist-video-action-list-body"),
         );
 
       /**
@@ -316,7 +240,7 @@ const win = window;
 
           // ! ----------------
         },
-        true
+        true,
       );
     }
   }
@@ -461,39 +385,4 @@ const win = window;
       toast(isLooping ? "开启循环" : "关闭循环");
     };
   }
-}
-
-// * ======================================================================================================================== Deprecated Code
-
-{
-  /**
-   * 除了活动页是 iframe 里的 #shinonome，其他现在都是 #bilibili-player
-   *
-   * #bilibili-player, #shinonome
-   *    .bpx-player-video-wrap > video
-   *
-   * @returns {HTMLMediaElement | void}
-   */
-  const getBiliVideoElement = () => {
-    // return document.querySelector("#bilibili-player video") ?? document.querySelector("#shinonome video");
-    return document.getElementById("bilibili-player")?.getElementsByTagName("video").item(0) ?? document.getElementById("shinonome")?.getElementsByTagName("video").item(0);
-  };
-
-  /**
-   * 自动切集 <input>
-   * @returns {HTMLInputElement}
-   */
-  const getHandoffAutoplayInput = () => document.getElementById("bilibili-player")?.querySelector(".bpx-player-ctrl-setting-handoff input[value='0']");
-
-  /**
-   * 播完暂停 <input>
-   * @returns {HTMLInputElement}
-   */
-  const getHandoffPauseInput = () => document.getElementById("bilibili-player")?.querySelector(".bpx-player-ctrl-setting-handoff input[value='2']");
-
-  /** @returns {HTMLElement} */
-  const getDanmuButton = () => win.player.getElements().container.querySelector(".bpx-player-dm-switch");
-
-  /** @returns {NodeListOf<HTMLElement>} */
-  const getDanmuLayer = () => win.player.getElements().videoArea.querySelectorAll(".bpx-player-row-dm-wrap, .bpx-player-cmd-dm-wrap");
 }

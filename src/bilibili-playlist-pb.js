@@ -30,7 +30,9 @@
 
     const u = new URL(url);
 
-    const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/]+)[/?]/)?.[1];
+    const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/?]+)\b/)?.[1];
+
+    if (!bvid) return;
 
     const data = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`).then((e) => e.json());
 
@@ -101,7 +103,7 @@
     async (e) => {
       /** @type {HTMLMediaElement} */
       // @ts-ignore
-      const media = window.player.mediaElement();
+      const media = window.player?.mediaElement();
 
       if (e.target !== media) return;
 
@@ -110,7 +112,7 @@
 
         /** 注：仅合集类型的视频，有带视频列表 */
         /** @type {HTMLElement} */
-        const playlistEl = document.querySelector("#mirror-vdcon .video-pod");
+        const playlistEl = document.querySelector("#mirror-vdcon .video-pod, #mirror-vdcon .action-list-container");
         if (!playlistEl) return;
 
         const currentTime = media.currentTime;
@@ -120,6 +122,7 @@
         /** attach pb element */
         if (!playlistEl.contains(pb.pbEl)) {
           playlistEl.style.position = "relative";
+          playlistEl.style.overflow = "initial";
           Object.assign(pb.pbEl.style, {
             position: "absolute",
             top: "0",
@@ -128,11 +131,14 @@
           });
           Object.assign(pb.textEl.style, {
             left: "0",
-            top: "-2px",
+            top: "0",
             transform: "translateY(-100%)",
             fontSize: "12px",
           });
-          playlistEl.appendChild(pb.pbEl);
+          // ! setTimeout for 等待B站dom检测功能执行完
+          setTimeout(() => {
+            playlistEl.appendChild(pb.pbEl);
+          }, 1000);
         }
 
         pb.updateProgressBar(time.all[0] + currentTime, time.all[1]);
@@ -154,11 +160,14 @@
             });
             Object.assign(pb2.textEl.style, {
               right: "0",
-              top: "-2px",
+              top: "0",
               transform: "translateY(-100%)",
               fontSize: "12px",
             });
-            playlistEl.appendChild(pb2.pbEl);
+            // ! setTimeout for 等待B站dom检测功能执行完
+            setTimeout(() => {
+              playlistEl.appendChild(pb2.pbEl);
+            }, 1000);
           }
 
           pb2.updateProgressBar(time.sub[0] + currentTime, time.sub[1]);

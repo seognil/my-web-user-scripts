@@ -126,7 +126,7 @@ const win = window;
   };
 
   /** @returns {HTMLVideoElement | null} */
-  const getBiliVideoElement = () => win.player.mediaElement();
+  const getBiliVideoElement = () => win.player?.mediaElement();
 
   /** @returns {HTMLElement | null} */
   const getWebFullButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-web");

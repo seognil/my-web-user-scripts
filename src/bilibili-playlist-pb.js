@@ -138,7 +138,7 @@
           // ! setTimeout for 等待B站dom检测功能执行完
           setTimeout(() => {
             playlistEl.appendChild(pb.pbEl);
-          }, 1000);
+          }, 1500);
         }
 
         pb.updateProgressBar(time.all[0] + currentTime, time.all[1]);
@@ -167,7 +167,7 @@
             // ! setTimeout for 等待B站dom检测功能执行完
             setTimeout(() => {
               playlistEl.appendChild(pb2.pbEl);
-            }, 1000);
+            }, 1500);
           }
 
           pb2.updateProgressBar(time.sub[0] + currentTime, time.sub[1]);

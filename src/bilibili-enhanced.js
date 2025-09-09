@@ -72,6 +72,7 @@
    * @typedef {Object} GlobalThings
    * @property {Object} player B 站的播放器控件
    * @property {Object} pswp B 站评论区图片控件 PhotoSwipe
+   * @property {Object} __INITIAL_STATE__ data
    */
 
   /** @type {Window & typeof globalThis & GlobalThings} */
@@ -200,9 +201,7 @@
     }
   }
 
-  // * ================================================================================ Hotkeys
-
-  // * ---------------------------------------------------------------- Custom Hotkeys Handler
+  // * ================================================================================ Hotkeys Handler
 
   {
     document.addEventListener("keydown", (e) => {
@@ -219,12 +218,15 @@
       const speedRange = [0.125, 4];
 
       if (false) "";
-      // * ---------------- copy clean url and snapshot
+      // * ---------------- copy clipboard
       else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         cleanUrlToClipboard();
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
         snapshotToClipboard();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        subtitleToClipboard();
       }
 
       // * ---------------- gui control
@@ -320,6 +322,29 @@
       mediaControl.videoSnap(video).then(() => toast("复制截图"));
     };
 
+    // * ------------------------------------------------ copy subtitle
+
+    const fetchSubtitle = async () => {
+      const { aid, cid } = win.__INITIAL_STATE__;
+      if (!aid || !cid) return;
+
+      const data = await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid}`, { credentials: "include" }).then((e) => e.json());
+      const suburl = data.data.subtitle.subtitles.find((e) => e.lan_doc.includes("中文"))?.subtitle_url;
+
+      if (!suburl) return;
+
+      const url = suburl.startsWith("//") ? "https:" + suburl : suburl;
+      return fetch(url).then((e) => e.json());
+    };
+
+    const subtitleToClipboard = async () => {
+      const d = await fetchSubtitle();
+      if (!d) toast("获取字幕失败");
+
+      const content = d.body?.map((e) => e.content).join("\n");
+      navigator.clipboard.writeText(content).then(() => toast("复制字幕"));
+    };
+
     // * ------------------------------------------------ danmaku
 
     /**
@@ -345,7 +370,7 @@
       toast(isLooping ? "开启循环" : "关闭循环");
     };
 
-    // * ---------------------------------------------------------------- Block Original Hotkeys
+    // * ================================================================================ Block Original Hotkeys
 
     {
       /**

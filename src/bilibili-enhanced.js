@@ -1,14 +1,6 @@
-/**
- * @typedef {Object} GlobalThings
- * @property {Object} player B 站的播放器控件
- * @property {Object} pswp B 站评论区图片控件 PhotoSwipe
- */
-
-/** @type {Window & typeof globalThis & GlobalThings} */
-// @ts-ignore
-const win = window;
-
 {
+  // * ================================================================================
+
   // TODO 对复合活动页的支持有限，因为是位于 iframe 中，个别功能的逻辑目前失效  // Seognil LC 2025/01/09
   // 而且本来活动页的功能和普通的播放页也不一样，比如也没有网页全屏按钮。以后有需要再说吧
 
@@ -74,56 +66,19 @@ const win = window;
     "9.1.": "https://www.bilibili.com/blackboard/activity-yXPfn575pD.html",
   };
 
-  // * ========================================================================================================================
+  // * ================================================================================ utils fn
 
   /**
-   * 有一个bug，如果是番剧，ss地址指向的是番剧本身（根据用户上次观看 不确定集数），而ep指向的是具体集数
-   * 不过也无所谓，连播时切换集数就会变成ep地址，而且复制番剧链接的需求比较少见2
-   *
-   * - 如果是私有列表，仅抓取 bvid
-   * - 如果是公开的列表，仅抓取 bvid（目前只有播放全部）
-   * - 其他情况（单视频等但是可能会有多p之类的参数）清理 search
+   * @typedef {Object} GlobalThings
+   * @property {Object} player B 站的播放器控件
+   * @property {Object} pswp B 站评论区图片控件 PhotoSwipe
    */
-  const getCleanUrl = () => {
-    const u = new URL(document.location.href);
 
-    if (/\/list\//.test(u.href)) {
-      const bvid = u.searchParams.get("bvid");
-      const p = pickSearchParamsString(u.searchParams, ["p"]);
-      const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
-      return bvidUrl;
-    } else {
-      const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
-      const cleanUrl = u.href.replace(u.search, cleanSearch);
-      return cleanUrl;
-    }
-  };
+  /** @type {Window & typeof globalThis & GlobalThings} */
+  // @ts-ignore
+  const win = window;
 
-  /**
-   * @param {URLSearchParams} s
-   * @param {string[]} keys
-   * @return {string} => ?key1=val1&key2=val2
-   */
-  const pickSearchParamsString = (s, keys) => {
-    const nextS = new URLSearchParams();
-    keys.forEach((key) => {
-      const val = s.get(key);
-      if (val === null || val === undefined) return;
-      nextS.set(key, val);
-    });
-    const str = nextS.toString();
-    return str ? `?${str}` : "";
-  };
-
-  const cleanUrlToClipboard = () => navigator.clipboard.writeText(getCleanUrl()).then(() => toast("复制地址"));
-
-  /** 视频截图到剪贴板 */
-  const snapshotToClipboard = () => {
-    const video = getBiliVideoElement();
-    if (!video) return;
-
-    mediaControl.videoSnap(video).then(() => toast("复制截图"));
-  };
+  // * ----------------------------------------------------------------
 
   /** @returns {HTMLVideoElement | null} */
   const getBiliVideoElement = () => win.player?.mediaElement();
@@ -138,7 +93,7 @@ const win = window;
   /** @param {string} text */
   const toast = (text) => mediaControl.toast(getBiliVideoElement()?.parentElement, text);
 
-  // * ======================================================================================================================== Automation
+  // * ================================================================================ Automation
 
   {
     // * ---------------------------------------------------------------- url relocation
@@ -245,11 +200,11 @@ const win = window;
     }
   }
 
-  // * ======================================================================================================================== Hotkeys
+  // * ================================================================================ Hotkeys
+
+  // * ---------------------------------------------------------------- Custom Hotkeys Handler
 
   {
-    // * ================================================================================ Custom Hotkeys Handler
-
     document.addEventListener("keydown", (e) => {
       // * skip inputing
       if (["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")) return;
@@ -312,7 +267,85 @@ const win = window;
       }
     });
 
-    // * ================================================================================ Block Original Hotkeys
+    // * ------------------------------------------------ copy url
+
+    /**
+     * 有一个bug，如果是番剧，ss地址指向的是番剧本身（根据用户上次观看 不确定集数），而ep指向的是具体集数
+     * 不过也无所谓，连播时切换集数就会变成ep地址，而且复制番剧链接的需求比较少见2
+     *
+     * - 如果是私有列表，仅抓取 bvid
+     * - 如果是公开的列表，仅抓取 bvid（目前只有播放全部）
+     * - 其他情况（单视频等但是可能会有多p之类的参数）清理 search
+     */
+    const getCleanUrl = () => {
+      const u = new URL(document.location.href);
+
+      if (/\/list\//.test(u.href)) {
+        const bvid = u.searchParams.get("bvid");
+        const p = pickSearchParamsString(u.searchParams, ["p"]);
+        const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
+        return bvidUrl;
+      } else {
+        const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
+        const cleanUrl = u.href.replace(u.search, cleanSearch);
+        return cleanUrl;
+      }
+    };
+
+    /**
+     * @param {URLSearchParams} s
+     * @param {string[]} keys
+     * @return {string} => ?key1=val1&key2=val2
+     */
+    const pickSearchParamsString = (s, keys) => {
+      const nextS = new URLSearchParams();
+      keys.forEach((key) => {
+        const val = s.get(key);
+        if (val === null || val === undefined) return;
+        nextS.set(key, val);
+      });
+      const str = nextS.toString();
+      return str ? `?${str}` : "";
+    };
+
+    const cleanUrlToClipboard = () => navigator.clipboard.writeText(getCleanUrl()).then(() => toast("复制地址"));
+
+    // * ------------------------------------------------ copy snapshot
+
+    /** 视频截图到剪贴板 */
+    const snapshotToClipboard = () => {
+      const video = getBiliVideoElement();
+      if (!video) return;
+
+      mediaControl.videoSnap(video).then(() => toast("复制截图"));
+    };
+
+    // * ------------------------------------------------ danmaku
+
+    /**
+     * 采用软实现，只控制弹幕层的 opacity，不使用 B 站自带的实现（完全关闭弹幕层）
+     * 通过 toggle container className 和 css 来直接实现，多快好省
+     */
+    const toggleDanmaku = () => {
+      const attachTarget = document.querySelector("#bilibili-player") ?? document.querySelector("#shinonome");
+      if (!attachTarget) return;
+      const hidden = attachTarget.classList.toggle("danmaku-hidden");
+      toast(hidden ? "弹幕层关" : "弹幕层开");
+    };
+
+    // * ------------------------------------------------ speed control
+
+    const toastPlaybackSpeed = () => {
+      const curRatio = getBiliVideoElement()?.playbackRate;
+      curRatio && toast("倍速 " + curRatio.toFixed(3).replace(/\.?0+$/, ""));
+    };
+
+    const toastReplayStatus = () => {
+      const isLooping = getBiliVideoElement()?.loop;
+      toast(isLooping ? "开启循环" : "关闭循环");
+    };
+
+    // * ---------------------------------------------------------------- Block Original Hotkeys
 
     {
       /**
@@ -357,32 +390,5 @@ const win = window;
         set: function () {},
       });
     }
-
-    // * ================================================================================ Features
-
-    // * ---------------------------------------------------------------- danmaku
-
-    /**
-     * 采用软实现，只控制弹幕层的 opacity，不使用 B 站自带的实现（完全关闭弹幕层）
-     * 通过 toggle container className 和 css 来直接实现，多快好省
-     */
-    const toggleDanmaku = () => {
-      const attachTarget = document.querySelector("#bilibili-player") ?? document.querySelector("#shinonome");
-      if (!attachTarget) return;
-      const hidden = attachTarget.classList.toggle("danmaku-hidden");
-      toast(hidden ? "弹幕层关" : "弹幕层开");
-    };
-
-    // * ---------------------------------------------------------------- speed control
-
-    const toastPlaybackSpeed = () => {
-      const curRatio = getBiliVideoElement()?.playbackRate;
-      curRatio && toast("倍速 " + curRatio.toFixed(3).replace(/\.?0+$/, ""));
-    };
-
-    const toastReplayStatus = () => {
-      const isLooping = getBiliVideoElement()?.loop;
-      toast(isLooping ? "开启循环" : "关闭循环");
-    };
   }
 }

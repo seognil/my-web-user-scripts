@@ -72,7 +72,7 @@
    * @typedef {Object} GlobalThings
    * @property {Object} player B 站的播放器控件
    * @property {Object} pswp B 站评论区图片控件 PhotoSwipe
-   * @property {Object} __INITIAL_STATE__ data
+   * @property {Object} [__INITIAL_STATE__] data
    */
 
   /** @type {Window & typeof globalThis & GlobalThings} */
@@ -96,33 +96,6 @@
 
   /** @param {string} text */
   const toast = (text) => mediaControl.toast(getBiliVideoElement()?.parentElement, text);
-
-  // * ----------------------------------------------------------------
-
-  /**
-   * 等待数据变更
-   * @param { () => any } getDataFn
-   * @param {{ interval?:number, timeout?:number }} [opts]
-   */
-  const waitUntilChanged = (getDataFn, opts) => {
-    const prevData = getDataFn();
-    return new Promise((res, rej) => {
-      if (getDataFn() !== prevData) return res();
-
-      const tick = setInterval(() => {
-        if (getDataFn() !== prevData) {
-          clearInterval(tick);
-          clearTimeout(tock);
-          res();
-        }
-      }, opts?.interval ?? 500);
-      const tock = setTimeout(() => {
-        clearInterval(tick);
-        clearTimeout(tock);
-        rej();
-      }, opts?.timeout ?? 2147483647);
-    });
-  };
 
   // * ================================================================================ Automation
 
@@ -151,21 +124,17 @@
 
       /** 仅当播放列表且非最后一集，才设置连播 */
 
-      const hasPlaylistNext = () => {
-        const cid = win.__INITIAL_STATE__.cid;
-        const playlist = win.__INITIAL_STATE__.videoData.ugc_season?.sections.flatMap((e) => e.episodes) ?? win.__INITIAL_STATE__.videoData.pages;
-
-        const hasNext = playlist.at(-1)?.cid !== cid;
-        return hasNext;
-      };
-
       /**
        * 0: 自动切集
        * 2: 播完暂停
        * @returns {Boolean} 返回=>是否进行了设置
        */
       const setHandoffLite = () => {
-        const shouldHandoff = hasPlaylistNext();
+        const cid = win.__INITIAL_STATE__?.cid;
+        const playlist = win.__INITIAL_STATE__?.videoData.ugc_season?.sections.flatMap((e) => e.episodes) ?? win.__INITIAL_STATE__.videoData.pages;
+        if (!playlist?.length) return false;
+
+        const shouldHandoff = playlist.at(-1)?.cid !== cid;
         const currentIsHandoff = win.player.getHandoff() === 0;
         if (shouldHandoff === currentIsHandoff) return false;
         win.player.setHandoff(shouldHandoff ? 0 : 2);
@@ -178,21 +147,11 @@
           const bvEl = getBiliVideoElement();
           if (e.target !== bvEl) return;
           setHandoffLite();
+          const tick = setInterval(() => setHandoffLite(), 500);
+          setTimeout(() => clearInterval(tick), 3000);
         },
         true,
       );
-
-      document.addEventListener("DOMContentLoaded", () => {
-        setHandoffLite();
-        const tick = setInterval(() => setHandoffLite(), 500);
-        setTimeout(() => clearInterval(tick), 3000);
-      });
-
-      // @ts-ignore
-      window.navigation.addEventListener("navigate", async () => {
-        await waitUntilChanged(() => win.__INITIAL_STATE__?.videoData.cid);
-        setHandoffLite();
-      });
     }
   }
 

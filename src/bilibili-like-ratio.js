@@ -293,31 +293,6 @@ const videoStatMap = new Map();
 
     // * ---------------- runner
 
-    /**
-     * 等待数据变更
-     * @param { () => any } getDataFn
-     * @param {{ interval?:number, timeout?:number }} [opts]
-     */
-    const waitUntilChanged = (getDataFn, opts) => {
-      const prevData = getDataFn();
-      return new Promise((res, rej) => {
-        if (getDataFn() !== prevData) return res();
-
-        const tick = setInterval(() => {
-          if (getDataFn() !== prevData) {
-            clearInterval(tick);
-            clearTimeout(tock);
-            res();
-          }
-        }, opts?.interval ?? 500);
-        const tock = setTimeout(() => {
-          clearInterval(tick);
-          clearTimeout(tock);
-          rej();
-        }, opts?.timeout ?? 2147483647);
-      });
-    };
-
     document.addEventListener("DOMContentLoaded", () => {
       // ! setTimeout for 等待B站dom检测功能执行完
       setTimeout(() => {
@@ -326,9 +301,6 @@ const videoStatMap = new Map();
     });
 
     // @ts-ignore
-    window.navigation.addEventListener("navigate", async () => {
-      await waitUntilChanged(() => win.__INITIAL_STATE__?.videoData.cid);
-      updater();
-    });
+    window.navigation.addEventListener("navigate", updater);
   }
 }

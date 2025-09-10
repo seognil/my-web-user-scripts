@@ -1,122 +1,50 @@
-/**
- *
- * https://www.bilibili.com/
- * https://www.bilibili.com/c/douga/
- *
- * https://search.bilibili.com/all?keyword=%E7%A1%85%E8%B0%B7101
- *
- * https://www.bilibili.com/video/BV1L2h9zzEA3/
- */
-
-// * ---------------------------------------------------------------- stat data store
-
-/**
- * @typedef {Object} VideoStat
- * @property {string} title
- * @property {number} view
- * @property {number} like
- */
-
-/** @type {Map<string, VideoStat>} */
-const videoStatMap = new Map();
-
-// * ---------------------------------------------------------------- data collecting
-
 {
-  // * -------------------------------- action set data
+  /**
+   *
+   * https://www.bilibili.com/
+   * https://www.bilibili.com/c/douga/
+   *
+   * https://search.bilibili.com/all?keyword=%E7%A1%85%E8%B0%B7101
+   *
+   * https://www.bilibili.com/video/BV1L2h9zzEA3/
+   */
 
-  // * ---------------- indexedDB for data analysis
-
-  const openDB = (dbName, storeName) =>
-    new Promise((resolve) => {
-      const request = indexedDB.open(dbName, 1);
-      // @ts-ignore
-      request.onupgradeneeded = (e) => e.target.result.createObjectStore(storeName);
-      // @ts-ignore
-      request.onsuccess = (e) => resolve(e.target.result);
-    });
-
-  const putItem = async (dbName, storeName, key, value) =>
-    new Promise(async (resolve, reject) => {
-      const db = await openDB(dbName, storeName);
-      const tx = db.transaction(storeName, "readwrite");
-      const store = tx.objectStore(storeName);
-      store.put(value, key);
-      tx.oncomplete = () => resolve(true);
-    });
-
-  const getAllItems = async (dbName, storeName) =>
-    new Promise(async (resolve) => {
-      const db = await openDB(dbName, storeName);
-      const tx = db.transaction(storeName, "readonly");
-      tx.objectStore(storeName).getAll().onsuccess = (e) => resolve(e.target.result);
-    });
-
-  // * ----------------
+  // * ---------------------------------------------------------------- stat data store
 
   /**
-   * @param {string} bvid
-   * @param {VideoStat} stat
+   * @typedef {Object} VideoStat
+   * @property {string} title
+   * @property {number} view
+   * @property {number} like
    */
-  const setStat = (bvid, stat) => {
-    videoStatMap.set(bvid, stat);
-    putItem("custom_bili_DB", "like-ratio", bvid, stat);
-  };
 
-  // * -------------------------------- record with ssr data
+  /** @type {Map<string, VideoStat>} */
+  const videoStatMap = new Map();
 
-  document.addEventListener("DOMContentLoaded", () => {
-    /** @type {Window & {__pinia: Object}} */
-    // @ts-ignore
-    const win = window;
+  // * ---------------------------------------------------------------- data collecting
 
-    /** home page ssr data */
-    win.__pinia?.feed?.data.recommend.item
-      .filter((e) => e.bvid)
-      .forEach((e) => {
-        setStat(e.bvid, {
-          title: e.title,
-          view: e.stat.view,
-          like: e.stat.like,
-        });
-      });
+  {
+    // * -------------------------------- action set data
 
-    /** search page ssr data */
-    win.__pinia?.searchResponse?.searchAllResponse.result[11].data
-      .filter((e) => e.type === "video")
-      .forEach((e) => {
-        setStat(e.bvid, {
-          title: e.title,
-          view: e.play,
-          like: e.like,
-        });
-      });
+    /**
+     * @param {string} bvid
+     * @param {VideoStat} stat
+     */
+    const setStat = (bvid, stat) => {
+      videoStatMap.set(bvid, stat);
+    };
 
-    win.__pinia?.searchTypeResponse?.searchTypeResponse.result
-      .filter((e) => e.type === "video")
-      .forEach((e) => {
-        setStat(e.bvid, {
-          title: e.title,
-          view: e.play,
-          like: e.like,
-        });
-      });
-  });
+    // * -------------------------------- record with ssr data
 
-  // * -------------------------------- record with fetch response
+    document.addEventListener("DOMContentLoaded", () => {
+      /** @type {Window & {__pinia: Object}} */
+      // @ts-ignore
+      const win = window;
 
-  /**
-   * @param {RequestInfo | URL} resource
-   * @param {Response} response
-   */
-  const middlewareHandler = async (resource, response) => {
-    if (typeof resource !== "string") return;
-
-    if (resource.includes("api.bilibili.com")) {
-      if (resource.includes("/rcmd")) {
-        const res = await response.clone().json();
-
-        res.data.item?.forEach((e) => {
+      /** home page ssr data */
+      win.__pinia?.feed?.data.recommend.item
+        .filter((e) => e.bvid)
+        .forEach((e) => {
           setStat(e.bvid, {
             title: e.title,
             view: e.stat.view,
@@ -124,58 +52,101 @@ const videoStatMap = new Map();
           });
         });
 
-        res.data.archives?.forEach((e) => {
-          setStat(e.bvid, {
-            title: e.title,
-            view: e.stat.view,
-            like: e.stat.like,
-          });
-        });
-      }
-
-      if (resource.includes("search/type")) {
-        const res = await response.clone().json();
-        res.data.result?.forEach((e) => {
+      /** search page ssr data */
+      win.__pinia?.searchResponse?.searchAllResponse.result[11].data
+        .filter((e) => e.type === "video")
+        .forEach((e) => {
           setStat(e.bvid, {
             title: e.title,
             view: e.play,
             like: e.like,
           });
         });
-      }
 
-      if (resource.includes("search/all/v2")) {
-        const res = await response.clone().json();
-        res.data.result?.[11]?.data
-          .filter((data) => data.type === "video")
-          .forEach((e) => {
+      win.__pinia?.searchTypeResponse?.searchTypeResponse.result
+        .filter((e) => e.type === "video")
+        .forEach((e) => {
+          setStat(e.bvid, {
+            title: e.title,
+            view: e.play,
+            like: e.like,
+          });
+        });
+    });
+
+    // * -------------------------------- record with fetch response
+
+    /**
+     * @param {RequestInfo | URL} resource
+     * @param {Response} response
+     */
+    const middlewareHandler = async (resource, response) => {
+      if (typeof resource !== "string") return;
+
+      if (resource.includes("api.bilibili.com")) {
+        if (resource.includes("/rcmd")) {
+          const res = await response.clone().json();
+
+          res.data.item?.forEach((e) => {
+            setStat(e.bvid, {
+              title: e.title,
+              view: e.stat.view,
+              like: e.stat.like,
+            });
+          });
+
+          res.data.archives?.forEach((e) => {
+            setStat(e.bvid, {
+              title: e.title,
+              view: e.stat.view,
+              like: e.stat.like,
+            });
+          });
+        }
+
+        if (resource.includes("search/type")) {
+          const res = await response.clone().json();
+          res.data.result?.forEach((e) => {
             setStat(e.bvid, {
               title: e.title,
               view: e.play,
               like: e.like,
             });
           });
+        }
+
+        if (resource.includes("search/all/v2")) {
+          const res = await response.clone().json();
+          res.data.result?.[11]?.data
+            .filter((data) => data.type === "video")
+            .forEach((e) => {
+              setStat(e.bvid, {
+                title: e.title,
+                view: e.play,
+                like: e.like,
+              });
+            });
+        }
       }
-    }
-  };
+    };
 
-  // * -------------------------------- override fetch
+    // * -------------------------------- override fetch
 
-  const orignialFetch = window.fetch;
-  window.fetch = (url, options) => {
-    return orignialFetch(url, options).then(async (response) => {
-      await middlewareHandler(url, response);
-      return response;
-    });
-  };
-}
+    const orignialFetch = window.fetch;
+    window.fetch = (url, options) => {
+      return orignialFetch(url, options).then(async (response) => {
+        await middlewareHandler(url, response);
+        return response;
+      });
+    };
+  }
 
-// * ---------------------------------------------------------------- render
+  // * ---------------------------------------------------------------- render
 
-{
-  // * -------------------------------- thumbsup element
+  {
+    // * -------------------------------- thumbsup element
 
-  const thumbsup = `
+    const thumbsup = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="18" height="18" fill="#ffffff"
     style="margin-right:2px;">
     <path
@@ -185,122 +156,123 @@ const videoStatMap = new Map();
 </svg>
 `;
 
-  const shadow = document.createElement("div");
-  shadow.innerHTML = thumbsup.trim();
-  const thumbsupEl = shadow.firstElementChild;
+    const shadow = document.createElement("div");
+    shadow.innerHTML = thumbsup.trim();
+    const thumbsupEl = shadow.firstElementChild;
 
-  // * -------------------------------- rarity color
+    // * -------------------------------- rarity color
 
-  /** @type {[number,string][]} */
-  const colormap = [
-    [0, "hsl(0 0% 80%)"],
-    [3, "hsl(120 100% 80%)"],
-    [6, "hsl(200 100% 70%)"],
-    [8, "hsl(300 100% 70%)"],
-    [10, "hsl(30 100% 60%)"],
-  ];
-  const ratioColor = (ratio) =>
-    colormap.find((e, i, a) => {
-      return e[0] <= ratio * 100 && ratio * 100 < (a[i + 1]?.[0] ?? Infinity);
-    })[1];
+    /** @type {[number,string][]} */
+    const colormap = [
+      [0, "hsl(0 0% 80%)"],
+      [3, "hsl(120 100% 80%)"],
+      [6, "hsl(200 100% 70%)"],
+      [8, "hsl(300 100% 70%)"],
+      [10, "hsl(30 100% 60%)"],
+    ];
+    const ratioColor = (ratio) =>
+      colormap.find((e, i, a) => {
+        return e[0] <= ratio * 100 && ratio * 100 < (a[i + 1]?.[0] ?? Infinity);
+      })[1];
 
-  // * -------------------------------- list card mutation
+    // * -------------------------------- list card mutation
 
-  document.addEventListener("DOMContentLoaded", () => {
-    domObserverAll(".bili-feed-card, .bili-video-card", (el) => {
-      const barEl = el.querySelector(".bili-video-card__stats--left, .bili-cover-card__stats");
+    document.addEventListener("DOMContentLoaded", () => {
+      domObserverAll(".bili-feed-card, .bili-video-card", (el) => {
+        const barEl = el.querySelector(".bili-video-card__stats--left, .bili-cover-card__stats");
 
-      if (!barEl) return;
-      if (barEl?.querySelector(".like-ratio")) return;
+        if (!barEl) return;
+        if (barEl?.querySelector(".like-ratio")) return;
 
-      // * ---------------- data
+        // * ---------------- data
 
-      const url = el.querySelector("a")?.href;
-      if (!url) return;
-      const u = new URL(url);
-      const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/?]+)\b/)?.[1];
+        const url = el.querySelector("a")?.href;
+        if (!url) return;
+        const u = new URL(url);
+        const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/?]+)\b/)?.[1];
 
-      const s = videoStatMap.get(bvid);
-      if (!s) return;
-      const ratio = s.view === 0 ? 0 : s.like / s.view;
+        const s = videoStatMap.get(bvid);
+        if (!s) return;
+        const ratio = s.view === 0 ? 0 : s.like / s.view;
 
-      // * ---------------- elements
-
-      /** @type {HTMLElement} */
-      // @ts-ignore
-      const itemEl = barEl.firstElementChild.cloneNode();
-      itemEl.classList.add("like-ratio");
-
-      itemEl.appendChild(thumbsupEl.cloneNode(true));
-
-      /** @type {HTMLElement} */
-      // @ts-ignore
-      const textEl = barEl.firstElementChild.querySelector("span").cloneNode();
-      textEl.textContent = (ratio * 100).toFixed(1) + "%";
-
-      textEl.style.color = ratioColor(ratio);
-
-      itemEl.appendChild(textEl);
-
-      // * ---------------- render
-
-      if (barEl.classList.contains("bili-cover-card__stats")) {
-        barEl.insertBefore(itemEl, barEl.children[2]);
-      } else {
-        barEl.appendChild(itemEl);
-      }
-    });
-  });
-
-  // * -------------------------------- video page toolbar mutation
-
-  {
-    /** @type {Window & {__INITIAL_STATE__: Object}} */
-    // @ts-ignore
-    const win = window;
-
-    // * ---------------- render
-
-    const updater = () => {
-      const s = win.__INITIAL_STATE__?.videoData.stat;
-      if (!s) return;
-
-      const d = [s.like, s.coin, s.favorite, s.share];
-      const el = document.querySelector(".video-toolbar-left-main");
-      const isInitial = !el.classList.contains("like-ratio");
-      el.classList.add("like-ratio");
-      Array.from(el.children).forEach((e, i) => {
-        /** @type {HTMLElement} */
-        const container = e.querySelector(".video-toolbar-left-item");
-        if (!container) return;
+        // * ---------------- elements
 
         /** @type {HTMLElement} */
         // @ts-ignore
-        const span = isInitial ? document.createElement("span") : container.lastElementChild;
+        const itemEl = barEl.firstElementChild.cloneNode();
+        itemEl.classList.add("like-ratio");
 
-        if (isInitial) {
-          span.style.filter = "brightness(80%)";
-          span.style.whiteSpace = "pre-wrap";
-          container.style.width = "auto";
-          container.appendChild(span);
+        itemEl.appendChild(thumbsupEl.cloneNode(true));
+
+        /** @type {HTMLElement} */
+        // @ts-ignore
+        const textEl = barEl.firstElementChild.querySelector("span").cloneNode();
+        textEl.textContent = (ratio * 100).toFixed(1) + "%";
+
+        textEl.style.color = ratioColor(ratio);
+
+        itemEl.appendChild(textEl);
+
+        // * ---------------- render
+
+        if (barEl.classList.contains("bili-cover-card__stats")) {
+          barEl.insertBefore(itemEl, barEl.children[2]);
+        } else {
+          barEl.appendChild(itemEl);
         }
-
-        const ratio = d[i] / s.view;
-        span.style.color = ratioColor(ratio);
-        span.textContent = ` =${(ratio * 100).toFixed(1)}%`;
       });
-    };
-
-    // * ---------------- runner
-
-    document.addEventListener("DOMContentLoaded", () => {
-      // ! setTimeout for 等待B站dom检测功能执行完
-      setTimeout(() => {
-        domObserverOnce(".video-toolbar-left-main", updater);
-      }, 2000);
     });
 
-    // @ts-ignore
-    window.navigation.addEventListener("navigate", updater);
+    // * -------------------------------- video page toolbar mutation
+
+    {
+      /** @type {Window & {__INITIAL_STATE__: Object}} */
+      // @ts-ignore
+      const win = window;
+
+      // * ---------------- render
+
+      const updater = () => {
+        const s = win.__INITIAL_STATE__?.videoData.stat;
+        if (!s) return;
+
+        const d = [s.like, s.coin, s.favorite, s.share];
+        const el = document.querySelector(".video-toolbar-left-main");
+        const isInitial = !el.classList.contains("like-ratio");
+        el.classList.add("like-ratio");
+        Array.from(el.children).forEach((e, i) => {
+          /** @type {HTMLElement} */
+          const container = e.querySelector(".video-toolbar-left-item");
+          if (!container) return;
+
+          /** @type {HTMLElement} */
+          // @ts-ignore
+          const span = isInitial ? document.createElement("span") : container.lastElementChild;
+
+          if (isInitial) {
+            span.style.filter = "brightness(80%)";
+            span.style.whiteSpace = "pre-wrap";
+            container.style.width = "auto";
+            container.appendChild(span);
+          }
+
+          const ratio = d[i] / s.view;
+          span.style.color = ratioColor(ratio);
+          span.textContent = ` =${(ratio * 100).toFixed(1)}%`;
+        });
+      };
+
+      // * ---------------- runner
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // ! setTimeout for 等待B站dom检测功能执行完
+        setTimeout(() => {
+          domObserverOnce(".video-toolbar-left-main", updater);
+        }, 2000);
+      });
+
+      // @ts-ignore
+      window.navigation.addEventListener("navigate", updater);
+    }
   }
 }

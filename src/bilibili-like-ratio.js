@@ -255,15 +255,6 @@ const videoStatMap = new Map();
   // * -------------------------------- video page toolbar mutation
 
   {
-    const waitUntil = (condition) =>
-      new Promise((resolve) => {
-        const timer = setInterval(() => {
-          if (!condition()) return;
-          clearInterval(timer);
-          resolve();
-        }, 500);
-      });
-
     /** @type {Window & {__INITIAL_STATE__: Object}} */
     // @ts-ignore
     const win = window;
@@ -302,19 +293,41 @@ const videoStatMap = new Map();
 
     // * ---------------- runner
 
+    /**
+     * 等待数据变更
+     * @param { () => any } getDataFn
+     * @param {{ interval?:number, timeout?:number }} [opts]
+     */
+    const waitUntilChanged = (getDataFn, opts) => {
+      const prevData = getDataFn();
+      return new Promise((res, rej) => {
+        if (getDataFn() !== prevData) return res();
+
+        const tick = setInterval(() => {
+          if (getDataFn() !== prevData) {
+            clearInterval(tick);
+            clearTimeout(tock);
+            res();
+          }
+        }, opts?.interval ?? 500);
+        const tock = setTimeout(() => {
+          clearInterval(tick);
+          clearTimeout(tock);
+          rej();
+        }, opts?.timeout ?? 2147483647);
+      });
+    };
+
     document.addEventListener("DOMContentLoaded", () => {
       // ! setTimeout for 等待B站dom检测功能执行完
       setTimeout(() => {
-        domObserverAll(".video-toolbar-left-main", updater);
-      }, 1000);
+        domObserverOnce(".video-toolbar-left-main", updater);
+      }, 2000);
     });
-
-    let lastBvid = win.__INITIAL_STATE__?.videoData.bvid;
 
     // @ts-ignore
     window.navigation.addEventListener("navigate", async () => {
-      await waitUntil(() => win.__INITIAL_STATE__?.videoData.bvid !== lastBvid);
-      lastBvid = win.__INITIAL_STATE__?.videoData.bvid;
+      await waitUntilChanged(() => win.__INITIAL_STATE__?.videoData.cid);
       updater();
     });
   }

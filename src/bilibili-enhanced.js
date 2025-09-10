@@ -89,10 +89,40 @@
   /** @returns {HTMLElement | null} */
   const getScreenFullButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-full");
 
+  /** @returns {HTMLElement | null} */
+  const getSubtitleButton = () => document.querySelector("#bilibili-player .bpx-player-ctrl-subtitle .bpx-common-svg-icon");
+
   // * ---------------------------------------------------------------- player custom toast
 
   /** @param {string} text */
   const toast = (text) => mediaControl.toast(getBiliVideoElement()?.parentElement, text);
+
+  // * ----------------------------------------------------------------
+
+  /**
+   * 等待数据变更
+   * @param { () => any } getDataFn
+   * @param {{ interval?:number, timeout?:number }} [opts]
+   */
+  const waitUntilChanged = (getDataFn, opts) => {
+    const prevData = getDataFn();
+    return new Promise((res, rej) => {
+      if (getDataFn() !== prevData) return res();
+
+      const tick = setInterval(() => {
+        if (getDataFn() !== prevData) {
+          clearInterval(tick);
+          clearTimeout(tock);
+          res();
+        }
+      }, opts?.interval ?? 500);
+      const tock = setTimeout(() => {
+        clearInterval(tick);
+        clearTimeout(tock);
+        rej();
+      }, opts?.timeout ?? 2147483647);
+    });
+  };
 
   // * ================================================================================ Automation
 
@@ -113,36 +143,20 @@
 
     {
       /**
-       * B 站的视频类型比较多，想把这些都视为播放列表
-       * 抓数据结构的话有点麻烦了，而且后续不容易维护
-       * 索性根据 UI 来判断，这样比较容易
+       * bugfix
+       * 在一些情况下（比如视频合集页面），B 站会拉取用户配置，重新设置一次 handoff
+       * 这个行为不是我想要的，**可能**会修改值我设定的值
+       * 目前不清楚是什么时候怎么发生的，那么先简单用定时检测来重行覆盖
        */
-      const getHasPlaylistView = () =>
-        Boolean(
-          /** 剧集模式：电影和动画的模式 */
-          document.querySelector(".main-container > .plp-r > [class^='eplist_ep_list_wrapper']") ??
-            /** 合集模式：up设定的视频合集 */
-            document.querySelector("#app .right-container .video-pod") ??
-            /** 临时化的列表：收藏夹 稍后再看 播放全部 （这个 query 其实性能很好） */
-            document.querySelector("#app .playlist-container--right .action-list-container #playlist-video-action-list-body"),
-        );
 
-      /**
-       * 当主视频播放时，判断是否处于播放列表中
-       *
-       * 如果是单视频，则关闭自动连播
-       * 如果是列表视频，则开启自动连播
-       *
-       * 因为是前端路由，所以缓存计算结果，可能没什么必要，不过这样实现也无所谓
-       * url（bvid 也行，用 url 比较简单） => 是否需要自动连播
-       *
-       * @type {Map<string, boolean>}
-       */
-      const map = new Map();
+      /** 仅当播放列表且非最后一集，才设置连播 */
 
-      const calcShouldHandoff = () => {
-        const url = location.href;
-        return map.has(url) ? map.get(url) : map.set(url, getHasPlaylistView()).get(url);
+      const hasPlaylistNext = () => {
+        const cid = win.__INITIAL_STATE__.cid;
+        const playlist = win.__INITIAL_STATE__.videoData.ugc_season?.sections.flatMap((e) => e.episodes) ?? win.__INITIAL_STATE__.videoData.pages;
+
+        const hasNext = playlist.at(-1)?.cid !== cid;
+        return hasNext;
       };
 
       /**
@@ -150,54 +164,35 @@
        * 2: 播完暂停
        * @returns {Boolean} 返回=>是否进行了设置
        */
-      const setHandoffSmart = () => {
-        const shouldHandoff = calcShouldHandoff();
+      const setHandoffLite = () => {
+        const shouldHandoff = hasPlaylistNext();
         const currentIsHandoff = win.player.getHandoff() === 0;
         if (shouldHandoff === currentIsHandoff) return false;
-        win.player.setHandoff(calcShouldHandoff() ? 0 : 2);
+        win.player.setHandoff(shouldHandoff ? 0 : 2);
         return true;
       };
-
-      let runBugfix = true;
 
       document.addEventListener(
         "play",
         (e) => {
           const bvEl = getBiliVideoElement();
           if (e.target !== bvEl) return;
-
-          setHandoffSmart();
-
-          // ! ----------------
-
-          /**
-           * bugfix
-           * 在一些情况下（比如视频合集页面），B 站会拉取用户配置，重新设置一次 handoff
-           * 这个行为不是我想要的，**可能**会修改值我设定的值
-           * 不知道怎么做拦截或者等待他覆盖后的事件，简单用定时检测来实现
-           * 前五秒做检查，应该足够了
-           */
-          if (runBugfix) {
-            const tick = setInterval(() => {
-              const changed = setHandoffSmart();
-
-              if (changed) {
-                clearInterval(tick);
-                clearTimeout(tick2);
-                runBugfix = false;
-              }
-            }, 1000);
-            const tick2 = setTimeout(() => {
-              clearInterval(tick);
-              clearTimeout(tick2);
-              runBugfix = false;
-            }, 5000);
-          }
-
-          // ! ----------------
+          setHandoffLite();
         },
         true,
       );
+
+      document.addEventListener("DOMContentLoaded", () => {
+        setHandoffLite();
+        const tick = setInterval(() => setHandoffLite(), 500);
+        setTimeout(() => clearInterval(tick), 3000);
+      });
+
+      // @ts-ignore
+      window.navigation.addEventListener("navigate", async () => {
+        await waitUntilChanged(() => win.__INITIAL_STATE__?.videoData.cid);
+        setHandoffLite();
+      });
     }
   }
 
@@ -233,7 +228,8 @@
       // 播放列表跳转用 B 站原生实现，也是 [ ]，不用自己写逻辑了
       // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "[") || e.key === "PageUp") playlistJumpControl(-1);
       // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "]") || e.key === "PageUp") playlistJumpControl(1);
-      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") toggleDanmaku();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "b") toggleDanmaku();
+      else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") getSubtitleButton()?.click();
       // * ---------------- fullscreen
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "t") getWebFullButton()?.click();
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "f") getScreenFullButton()?.click();

@@ -193,9 +193,6 @@
       }
 
       // * ---------------- gui control
-      // 播放列表跳转用 B 站原生实现，也是 [ ]，不用自己写逻辑了
-      // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "[") || e.key === "PageUp") playlistJumpControl(-1);
-      // else if ((!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "]") || e.key === "PageUp") playlistJumpControl(1);
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "b") toggleDanmaku();
       else if (!(e.ctrlKey || e.metaKey || e.shiftKey) && e.key === "c") getSubtitleButton()?.click();
       // * ---------------- fullscreen

@@ -7,37 +7,72 @@
    * https://search.bilibili.com/all?keyword=%E7%A1%85%E8%B0%B7101
    *
    * https://www.bilibili.com/video/BV1L2h9zzEA3/
+   *
+   * https://www.bilibili.com/list/watchlater?oid=113431445249673&bvid=BV1M4DTYKEfs
+   *
+   * https://www.bilibili.com/bangumi/play/ss41410
+   * https://www.bilibili.com/bangumi/play/ep691614
    */
 
-  // * ---------------------------------------------------------------- stat data store
+  // * ================================================================================ analysis
+
+  /** 本地 indexedDB，用于后续分析 */
+
+  const dbPut = (tableName, key, value) => {
+    // console.log("[lcdebug 4e850b]", tableName, key, value);
+    dbUtil.put("bilibili-videos", tableName, key, value);
+  };
+
+  // * ================================================================================ rarity color
+
+  /** @type {[number,string][]} */
+  const colormap = [
+    [0, "hsl(0 0% 80%)"],
+    [4, "hsl(120 100% 80%)"],
+    [6, "hsl(200 100% 70%)"],
+    [8, "hsl(300 100% 70%)"],
+    [10, "hsl(30 100% 60%)"],
+  ];
+  const ratioColor = (ratio) =>
+    colormap.find((e, i, a) => {
+      return e[0] <= ratio * 100 && ratio * 100 < (a[i + 1]?.[0] ?? Infinity);
+    })?.[1] ?? "black";
+
+  // * ================================================================================ card list
+
+  // * ---------------------------------------------------------------- bvid data
 
   /**
-   * @typedef {Object} VideoStat
-   * @property {string} title
+   * @typedef {Object} CardVideoStat
    * @property {number} view
    * @property {number} like
    */
 
-  /** @type {Map<string, VideoStat>} */
-  const videoStatMap = new Map();
+  /** @type {Map<string, CardVideoStat & Record<any,any>>} */
+  const cardStatMap = new Map();
 
-  // * ---------------------------------------------------------------- data collecting
+  const isCardPage =
+    location.pathname === "/" ||
+    location.pathname.startsWith("/c/") ||
+    //
+    location.host.startsWith("search");
 
   {
     // * -------------------------------- action set data
 
     /**
      * @param {string} bvid
-     * @param {VideoStat} stat
+     * @param {CardVideoStat & Record<any,any>} stat
      */
-    const setStat = (bvid, stat) => {
-      videoStatMap.set(bvid, stat);
+    const setCardStat = (bvid, stat) => {
+      cardStatMap.set(bvid, stat);
+      dbPut("list", bvid, stat);
     };
 
     // * -------------------------------- record with ssr data
 
     document.addEventListener("DOMContentLoaded", () => {
-      /** @type {Window & {__pinia: Object}} */
+      /** @type {Window & {__pinia:Object}} */
       // @ts-ignore
       const win = window;
 
@@ -45,7 +80,10 @@
       win.__pinia?.feed?.data.recommend.item
         .filter((e) => e.bvid)
         .forEach((e) => {
-          setStat(e.bvid, {
+          setCardStat(e.bvid, {
+            bvid: e.bvid,
+            cid: e.cid,
+            author: e.owner.name,
             title: e.title,
             view: e.stat.view,
             like: e.stat.like,
@@ -56,17 +94,24 @@
       win.__pinia?.searchResponse?.searchAllResponse.result[11].data
         .filter((e) => e.type === "video")
         .forEach((e) => {
-          setStat(e.bvid, {
+          setCardStat(e.bvid, {
+            bvid: e.bvid,
+            aid: e.aid,
+            author: e.author,
             title: e.title,
             view: e.play,
             like: e.like,
           });
         });
 
+      /** search page ssr data (while search query) */
       win.__pinia?.searchTypeResponse?.searchTypeResponse.result
-        .filter((e) => e.type === "video")
+        ?.filter((e) => e.type === "video")
         .forEach((e) => {
-          setStat(e.bvid, {
+          setCardStat(e.bvid, {
+            bvid: e.bvid,
+            aid: e.aid,
+            author: e.author,
             title: e.title,
             view: e.play,
             like: e.like,
@@ -76,27 +121,34 @@
 
     // * -------------------------------- record with fetch response
 
-    /**
-     * @param {RequestInfo | URL} resource
-     * @param {Response} response
-     */
-    const middlewareHandler = async (resource, response) => {
+    fetchHook.add(async (resource, response) => {
+      if (!isCardPage) return;
+
       if (typeof resource !== "string") return;
 
       if (resource.includes("api.bilibili.com")) {
         if (resource.includes("/rcmd")) {
-          const res = await response.clone().json();
+          const res = await response.json();
 
+          /** home page load more */
           res.data.item?.forEach((e) => {
-            setStat(e.bvid, {
+            setCardStat(e.bvid, {
+              bvid: e.bvid,
+              cid: e.cid,
+              author: e.owner.name,
               title: e.title,
               view: e.stat.view,
               like: e.stat.like,
             });
           });
 
+          /** c page load more */
           res.data.archives?.forEach((e) => {
-            setStat(e.bvid, {
+            setCardStat(e.bvid, {
+              bvid: e.bvid,
+              aid: e.aid,
+              cid: e.cid,
+              author: e.author.name,
               title: e.title,
               view: e.stat.view,
               like: e.stat.like,
@@ -104,10 +156,14 @@
           });
         }
 
+        /** search page update query */
         if (resource.includes("search/type")) {
-          const res = await response.clone().json();
+          const res = await response.json();
           res.data.result?.forEach((e) => {
-            setStat(e.bvid, {
+            setCardStat(e.bvid, {
+              bvid: e.bvid,
+              aid: e.aid,
+              author: e.author,
               title: e.title,
               view: e.play,
               like: e.like,
@@ -115,12 +171,16 @@
           });
         }
 
+        /** search page clear query */
         if (resource.includes("search/all/v2")) {
-          const res = await response.clone().json();
+          const res = await response.json();
           res.data.result?.[11]?.data
             .filter((data) => data.type === "video")
             .forEach((e) => {
-              setStat(e.bvid, {
+              setCardStat(e.bvid, {
+                bvid: e.bvid,
+                aid: e.aid,
+                author: e.author,
                 title: e.title,
                 view: e.play,
                 like: e.like,
@@ -128,17 +188,7 @@
             });
         }
       }
-    };
-
-    // * -------------------------------- override fetch
-
-    const orignialFetch = window.fetch;
-    window.fetch = (url, options) => {
-      return orignialFetch(url, options).then(async (response) => {
-        await middlewareHandler(url, response);
-        return response;
-      });
-    };
+    });
   }
 
   // * ---------------------------------------------------------------- render
@@ -160,24 +210,11 @@
     shadow.innerHTML = thumbsup.trim();
     const thumbsupEl = shadow.firstElementChild;
 
-    // * -------------------------------- rarity color
-
-    /** @type {[number,string][]} */
-    const colormap = [
-      [0, "hsl(0 0% 80%)"],
-      [3, "hsl(120 100% 80%)"],
-      [6, "hsl(200 100% 70%)"],
-      [8, "hsl(300 100% 70%)"],
-      [10, "hsl(30 100% 60%)"],
-    ];
-    const ratioColor = (ratio) =>
-      colormap.find((e, i, a) => {
-        return e[0] <= ratio * 100 && ratio * 100 < (a[i + 1]?.[0] ?? Infinity);
-      })[1];
-
     // * -------------------------------- list card mutation
 
     document.addEventListener("DOMContentLoaded", () => {
+      if (!isCardPage) return;
+
       domObserverAll(".bili-feed-card, .bili-video-card", (el) => {
         const barEl = el.querySelector(".bili-video-card__stats--left, .bili-cover-card__stats");
 
@@ -191,7 +228,7 @@
         const u = new URL(url);
         const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/?]+)\b/)?.[1];
 
-        const s = videoStatMap.get(bvid);
+        const s = cardStatMap.get(bvid);
         if (!s) return;
         const ratio = s.view === 0 ? 0 : s.like / s.view;
 
@@ -222,57 +259,264 @@
         }
       });
     });
+  }
 
-    // * -------------------------------- video page toolbar mutation
+  // * ================================================================================ bvid videos
 
-    {
-      /** @type {Window & {__INITIAL_STATE__: Object}} */
+  {
+    /**
+     * @typedef {Object} VideoStat
+     * @property {number} view
+     * @property {number} like
+     * @property {number} coin
+     * @property {number} favorite
+     * @property {number} share
+     */
+
+    /** @type {Map<string, VideoStat & Record<any,any>>} */
+    const videoStatMap = new Map();
+
+    /**
+     * @param {string} bvid
+     * @param {VideoStat & Record<any,any>} stat
+     */
+    const setVideoStat = (bvid, stat) => {
+      videoStatMap.set(bvid, stat);
+      dbPut("bvid", bvid, stat);
+    };
+
+    // * -------------------------------- ssr bind
+
+    document.addEventListener("DOMContentLoaded", () => {
+      /** @type {Window & {__INITIAL_STATE__:Object}} */
       // @ts-ignore
       const win = window;
+      const s = win.__INITIAL_STATE__?.videoData;
+      if (!s) return;
 
-      // * ---------------- render
-
-      const updater = () => {
-        const s = win.__INITIAL_STATE__?.videoData.stat;
-        if (!s) return;
-
-        const d = [s.like, s.coin, s.favorite, s.share];
-        const el = document.querySelector(".video-toolbar-left-main");
-        const isInitial = !el.classList.contains("like-ratio");
-        el.classList.add("like-ratio");
-        Array.from(el.children).forEach((e, i) => {
-          /** @type {HTMLElement} */
-          const container = e.querySelector(".video-toolbar-left-item");
-          if (!container) return;
-
-          /** @type {HTMLElement} */
-          // @ts-ignore
-          const span = isInitial ? document.createElement("span") : container.lastElementChild;
-
-          if (isInitial) {
-            span.style.filter = "brightness(80%)";
-            span.style.whiteSpace = "pre-wrap";
-            container.style.width = "auto";
-            container.appendChild(span);
-          }
-
-          const ratio = d[i] / s.view;
-          span.style.color = ratioColor(ratio);
-          span.textContent = ` =${(ratio * 100).toFixed(1)}%`;
-        });
-      };
-
-      // * ---------------- runner
-
-      document.addEventListener("DOMContentLoaded", () => {
-        // ! setTimeout for 等待B站dom检测功能执行完
-        setTimeout(() => {
-          domObserverOnce(".video-toolbar-left-main", updater);
-        }, 2000);
+      setVideoStat(s.bvid, {
+        bvid: s.bvid,
+        aid: s.aid,
+        cid: s.cid,
+        author: s.owner.name,
+        title: s.title,
+        view: s.stat.view,
+        like: s.stat.like,
+        coin: s.stat.coin,
+        favorite: s.stat.favorite,
+        share: s.stat.share,
       });
 
+      // ! 等待一段时间，不然B站会二次刷新，原因未知
+      setTimeout(() => {
+        updater();
+      }, 2000);
+    });
+
+    // * -------------------------------- navigation bind
+
+    // @ts-ignore
+    window.navigation.addEventListener("navigate", (e) => {
+      updater(e.destination.url);
+    });
+
+    // * -------------------------------- xhr bind
+
+    xhrHook.add(async (xhr) => {
+      if (xhr.responseURL.includes("api.bilibili.com") && xhr.responseURL.includes("/detail?")) {
+        const res = JSON.parse(xhr.responseText);
+        const v = res.data.View;
+        setVideoStat(v.bvid, {
+          bvid: v.bvid,
+          aid: v.aid,
+          cid: v.cid,
+          author: v.owner.name,
+          title: v.title,
+          view: v.stat.view,
+          like: v.stat.like,
+          coin: v.stat.coin,
+          favorite: v.stat.favorite,
+          share: v.stat.share,
+        });
+        updater();
+      }
+    });
+
+    // * -------------------------------- render
+
+    /**
+     * @param {string} [targetUrl]
+     */
+    const updater = (targetUrl) => {
+      const url = targetUrl ?? location.href;
+      const bvid = new URL(url).searchParams.get("bvid") ?? url.match(/\bBV[^/?]+\b/)?.[0];
+      const s = videoStatMap.get(bvid);
+      if (!s) return;
+
+      const d = [s.like, s.coin, s.favorite, s.share];
+      const el = document.querySelector(".video-toolbar-left-main");
+      const isInitial = !el.classList.contains("like-ratio");
+      el.classList.add("like-ratio");
+      Array.from(el.children).forEach((e, i) => {
+        /** @type {HTMLElement} */
+        const container = e.querySelector(".video-toolbar-left-item");
+        if (!container) return;
+
+        /** @type {HTMLElement} */
+        // @ts-ignore
+        const span = isInitial ? document.createElement("span") : container.lastElementChild;
+
+        if (isInitial) {
+          span.style.filter = "brightness(80%)";
+          span.style.whiteSpace = "pre-wrap";
+          container.style.width = "auto";
+          container.appendChild(span);
+        }
+
+        const ratio = d[i] / s.view;
+        span.style.color = ratioColor(ratio);
+        span.textContent = ` =${(ratio * 100).toFixed(1)}%`;
+      });
+    };
+  }
+
+  // * ================================================================================ bangumi videos
+
+  {
+    /**
+     * @typedef {Object} BangumiStat
+     * @property {number} view
+     * @property {number} like
+     * @property {number} coin
+     * @property {number} favorite
+     * @property {number} share
+     */
+
+    /** @type {Map<number, BangumiStat & Record<any,any>>} */
+    const bangumiStatMap = new Map();
+
+    /**
+     * @param {number} epid
+     * @param {BangumiStat & Record<any,any>} stat
+     */
+    const setBangumiStat = (epid, stat) => {
+      bangumiStatMap.set(epid, {
+        ...(bangumiStatMap.get(epid) ?? {}),
+        ...stat,
+      });
+
+      dbPut("bvid", epid, bangumiStatMap.get(epid));
+    };
+
+    // * -------------------------------- ssr bind
+
+    document.addEventListener("DOMContentLoaded", () => {
+      /** @type {Window & {__NEXT_DATA__:Object}} */
       // @ts-ignore
-      window.navigation.addEventListener("navigate", updater);
-    }
+      const win = window;
+      if (!win.__NEXT_DATA__) return;
+
+      const r = win.__NEXT_DATA__.props.pageProps.dehydratedState.queries[0].state.data.data.result;
+      const info = r.supplement.ogv_episode_info;
+
+      const d = win.__NEXT_DATA__.props.pageProps.dehydratedState.queries[1].state.data;
+      const stat = d.stat;
+
+      setBangumiStat(info.episode_id, {
+        bvid: r.arc.bvid,
+        aid: r.arc.aid,
+        cid: r.arc.cid,
+        season_id: d.season_id,
+        season_title: d.season_title,
+        episode_id: info.episode_id,
+        episode_title: info.long_title,
+        view: stat.views,
+        like: stat.likes,
+        coin: stat.coins,
+        favorite: stat.favorites,
+        share: stat.share,
+      });
+      updater();
+    });
+
+    // * -------------------------------- navigation bind
+
+    // @ts-ignore
+    window.navigation.addEventListener("navigate", (e) => {
+      updater(e.destination.url);
+    });
+
+    // * -------------------------------- xhr bind (video info)
+
+    xhrHook.add((xhr) => {
+      if (xhr.responseURL.includes("api.bilibili.com")) {
+        if (xhr.responseURL.includes("/playview?")) {
+          const res = JSON.parse(xhr.responseText);
+
+          const info = res.data.supplement.ogv_episode_info;
+          const arc = res.data.arc;
+          // @ts-ignore
+          setBangumiStat(info.episode_id, {
+            bvid: arc.bvid,
+            aid: arc.aid,
+            cid: arc.cid,
+            episode_id: info.episode_id,
+            episode_title: info.long_title,
+          });
+        }
+      }
+    });
+
+    // * -------------------------------- xhr bind (ratio)
+
+    xhrHook.add((xhr) => {
+      if (xhr.responseURL.includes("api.bilibili.com") && xhr.responseURL.includes("info?ep_id")) {
+        const res = JSON.parse(xhr.responseText);
+
+        setBangumiStat(res.data.episode_id, res.data.stat);
+        updater();
+      }
+    });
+
+    // * -------------------------------- render
+
+    /**
+     * @param {string} [targetUrl]
+     */
+    const updater = (targetUrl) => {
+      // @ts-ignore
+      const url = targetUrl ?? document.querySelector("link[rel=canonical]").href;
+      if (!url.includes("/bangumi/")) return;
+
+      const epid = url.match(/\/ep(\d+)\b/)?.[1];
+      const s = bangumiStatMap.get(Number(epid));
+      if (!s) return;
+
+      const d = [s.like, s.coin, s.favorite, s.share];
+      const el = document.querySelector(".toolbar-left");
+      const isInitial = !el.classList.contains("like-ratio");
+      el.classList.add("like-ratio");
+      d.forEach((e, i) => {
+        /** @type {HTMLElement} */
+        // @ts-ignore
+        const container = el.children[i];
+        if (!container) return;
+
+        /** @type {HTMLElement} */
+        // @ts-ignore
+        const span = isInitial ? document.createElement("span") : container.lastElementChild;
+
+        if (isInitial) {
+          span.style.filter = "brightness(80%)";
+          span.style.whiteSpace = "pre-wrap";
+          container.style.width = "auto";
+          container.appendChild(span);
+        }
+
+        const ratio = d[i] / s.view;
+        span.style.color = ratioColor(ratio);
+        span.textContent = ` =${(ratio * 100).toFixed(1)}%`;
+      });
+    };
   }
 }

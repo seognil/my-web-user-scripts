@@ -122,22 +122,31 @@
        * 目前不清楚是什么时候怎么发生的，那么先简单用定时检测来重行覆盖
        */
 
-      /** 仅当播放列表且非最后一集，才设置连播 */
+      /**
+       * bangumi 简单设置为总是连播，不做最后一集判断了，这样少写很多逻辑
+       * 其他普通 video，仅当播放列表且非最后一集，才设置连播
+       */
+
+      const shouldAutoplay = () => {
+        if (location.pathname.includes("/bangumi/")) return true;
+
+        const cid = win.__INITIAL_STATE__?.cid;
+        const playlist = win.__INITIAL_STATE__?.videoData.ugc_season?.sections.flatMap((e) => e.episodes) ?? win.__INITIAL_STATE__?.videoData.pages;
+        if (!playlist?.length) return false;
+
+        return playlist.at(-1)?.cid !== cid;
+      };
 
       /**
        * 0: 自动切集
        * 2: 播完暂停
        * @returns {Boolean} 返回=>是否进行了设置
        */
-      const setHandoffLite = () => {
-        const cid = win.__INITIAL_STATE__?.cid;
-        const playlist = win.__INITIAL_STATE__?.videoData.ugc_season?.sections.flatMap((e) => e.episodes) ?? win.__INITIAL_STATE__.videoData.pages;
-        if (!playlist?.length) return false;
-
-        const shouldHandoff = playlist.at(-1)?.cid !== cid;
+      const setAutoplayLite = () => {
+        const should = shouldAutoplay();
         const currentIsHandoff = win.player.getHandoff() === 0;
-        if (shouldHandoff === currentIsHandoff) return false;
-        win.player.setHandoff(shouldHandoff ? 0 : 2);
+        if (should === currentIsHandoff) return false;
+        win.player.setHandoff(should ? 0 : 2);
         return true;
       };
 
@@ -146,8 +155,8 @@
         (e) => {
           const bvEl = getBiliVideoElement();
           if (e.target !== bvEl) return;
-          setHandoffLite();
-          const tick = setInterval(() => setHandoffLite(), 500);
+          setAutoplayLite();
+          const tick = setInterval(() => setAutoplayLite(), 500);
           setTimeout(() => clearInterval(tick), 3000);
         },
         true,
@@ -226,43 +235,42 @@
 
     // * ------------------------------------------------ copy url
 
+    // const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
+    // const cleanUrl = u.href.replace(u.search, cleanSearch);
+    // return cleanUrl;
+
+    // /**
+    //  * @param {URLSearchParams} s
+    //  * @param {string[]} keys
+    //  * @return {string} => ?key1=val1&key2=val2
+    //  */
+    // const pickSearchParamsString = (s, keys) => {
+    //   const nextS = new URLSearchParams();
+    //   keys.forEach((key) => {
+    //     const val = s.get(key);
+    //     if (val === null || val === undefined) return;
+    //     nextS.set(key, val);
+    //   });
+    //   const str = nextS.toString();
+    //   return str ? `?${str}` : "";
+    // };
+
     /**
-     * 有一个bug，如果是番剧，ss地址指向的是番剧本身（根据用户上次观看 不确定集数），而ep指向的是具体集数
-     * 不过也无所谓，连播时切换集数就会变成ep地址，而且复制番剧链接的需求比较少见2
-     *
-     * - 如果是私有列表，仅抓取 bvid
-     * - 如果是公开的列表，仅抓取 bvid（目前只有播放全部）
-     * - 其他情况（单视频等但是可能会有多p之类的参数）清理 search
+     * - 如果是列表，不要返回列表url，而是 bvid + p
+     * - 其他情况直接使用B站已经提供的干净 url
      */
     const getCleanUrl = () => {
-      const u = new URL(document.location.href);
-
-      if (/\/list\//.test(u.href)) {
-        const bvid = u.searchParams.get("bvid");
-        const p = pickSearchParamsString(u.searchParams, ["p"]);
-        const bvidUrl = `https://www.bilibili.com/video/${bvid}/${p}`;
-        return bvidUrl;
-      } else {
-        const cleanSearch = pickSearchParamsString(u.searchParams, ["bvid", "oid", "sort_field", "p"]);
-        const cleanUrl = u.href.replace(u.search, cleanSearch);
-        return cleanUrl;
+      if (!location.pathname.includes("/list/")) {
+        // @ts-ignore
+        return document.querySelector("link[rel=canonical]").href;
       }
-    };
 
-    /**
-     * @param {URLSearchParams} s
-     * @param {string[]} keys
-     * @return {string} => ?key1=val1&key2=val2
-     */
-    const pickSearchParamsString = (s, keys) => {
-      const nextS = new URLSearchParams();
-      keys.forEach((key) => {
-        const val = s.get(key);
-        if (val === null || val === undefined) return;
-        nextS.set(key, val);
-      });
-      const str = nextS.toString();
-      return str ? `?${str}` : "";
+      const u = new URL(location.href);
+      const bvid = u.searchParams.get("bvid");
+      const p = u.searchParams.get("p");
+      const pstr = p ? `?p=${p}` : "";
+      const bvidUrl = `https://www.bilibili.com/video/${bvid}/${pstr}`;
+      return bvidUrl;
     };
 
     const cleanUrlToClipboard = () => navigator.clipboard.writeText(getCleanUrl()).then(() => toast("复制地址"));
@@ -280,7 +288,9 @@
     // * ------------------------------------------------ copy subtitle
 
     const fetchSubtitle = async () => {
-      const { aid, cid } = win.__INITIAL_STATE__;
+      if (location.pathname.includes("/bangumi/")) return;
+
+      const { aid, cid } = win.__INITIAL_STATE__ ?? {};
       if (!aid || !cid) return;
 
       const data = await fetch(`https://api.bilibili.com/x/player/wbi/v2?aid=${aid}&cid=${cid}`, { credentials: "include" }).then((e) => e.json());

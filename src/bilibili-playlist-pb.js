@@ -25,26 +25,42 @@
 
   // * -------------------------------- build playlist time
 
-  const buildListTime = async (url = document.location.href) => {
-    // * ---------------- get data
+  /** @type {Map<string, any>} */
+  const fetchCache = new Map();
+
+  /**
+   * @typedef {Object} PlaylistTime
+   * @property {[number,number]} all
+   * @property {[number,number]} [sub]
+   */
+
+  const buildListTime = async (url = location.href) => {
+    // * ---------------- params
 
     const u = new URL(url);
 
-    const bvid = u.searchParams.get("bvid") ?? u.href.match(/video\/([^/?]+)\b/)?.[1];
+    const bvid = u.searchParams.get("bvid") ?? u.href.match(/\bBV[^/?]+\b/)?.[0];
 
     if (!bvid) return;
 
-    const data = await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`).then((e) => e.json());
+    const data =
+      fetchCache.get(bvid) ??
+      (await fetch(`https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`)
+        .then((e) => e.json())
+        .then((e) => {
+          fetchCache.set(bvid);
+          return e;
+        }));
 
-    const p = u.searchParams.get("p");
+    const p = Number(u.searchParams.get("p") ?? 1);
 
-    // * ----------------
+    // * ---------------- build
 
     if (data.data.ugc_season) {
       const eps = data.data.ugc_season?.sections.flatMap((e) => e.episodes);
       const epIndex = eps?.findIndex((e) => e.bvid === bvid);
       const pages = eps?.find((e) => e.bvid === bvid).pages;
-      const pageIndex = p ? Number(p) - 1 : 0;
+      const pageIndex = p - 1;
 
       const totalTimeAll = eps
         .flatMap((e) => e.pages)
@@ -57,6 +73,7 @@
 
       const beforeTimeSub = (pageIndex > 0 ? pages.slice(0, pageIndex) : []).map((e) => e.duration).reduce((a, e) => a + e, 0);
 
+      /** @type {PlaylistTime} */
       const result = {
         all: [beforeTimeAll, totalTimeAll],
         sub: [beforeTimeSub, TotalTimeSub],
@@ -70,28 +87,31 @@
       const isSinglePage = pages.length <= 1;
       if (isSinglePage) return null;
 
-      const pageIndex = p ? Number(p) - 1 : 0;
+      const pageIndex = p - 1;
 
       const totalTimeAll = pages.map((e) => e.duration).reduce((a, e) => a + e, 0);
 
       const beforeTimeAll = (pageIndex > 0 ? pages.slice(0, pageIndex) : []).map((e) => e.duration).reduce((a, e) => a + e, 0);
 
-      return {
+      /** @type {PlaylistTime} */
+      const result = {
         all: [beforeTimeAll, totalTimeAll],
       };
+      return result;
     }
   };
 
-  /** @type { { all: [number, number], sub?: [number,number] } | null } */
+  // * -------------------------------- build bind
+
+  /** @type { PlaylistTime | null } */
   let time = null;
+
+  buildListTime().then((result) => (time = result));
 
   // @ts-ignore
   window.navigation.addEventListener("navigate", (event) => {
-    // @ts-ignore
     buildListTime(event.destination.url).then((result) => (time = result));
   });
-  // @ts-ignore
-  buildListTime().then((result) => (time = result));
 
   // * -------------------------------- progress bar
 
